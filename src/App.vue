@@ -1,5 +1,16 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
+import { onMounted } from "vue";
+import HelloWorld from "./components/HelloWorld.vue";
+
+onMounted(async () => {
+  try {
+    const response = await fetch("http://localhost:3000/api/test");
+    const data = await response.json();
+    console.log("Odgovor s backenda:", data);
+  } catch (err) {
+    console.error("Greška pri povezivanju:", err);
+  }
+});
 </script>
 
 <template>
