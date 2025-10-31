@@ -15,11 +15,12 @@ async function login() {
   try {
     const isEmail = identifier.value.includes("@");
     const payload = isEmail
-      ? { email: identifier.value, password: password.value }
-      : { username: identifier.value, password: password.value };
+      ? { email: identifier.value.trim(), password: password.value }
+      : { username: identifier.value.trim(), password: password.value };
+
     const { data } = await api.post("/login", payload);
     localStorage.setItem("token", data.token);
-    router.push("/register");
+    router.push({ name: "home" });
   } catch (err) {
     errorMsg.value =
       err?.response?.data?.message ||
@@ -33,43 +34,60 @@ async function login() {
 
 <template>
   <div class="auth-bg">
-    <div class="auth-card">
-      <h2 class="title">Prijava</h2>
+    <div class="stack">
+      <router-link to="/" class="logo-link" aria-label="GlamPlanner početna">
+        <img
+          class="auth-logo"
+          alt="GlamPlanner logo"
+          src="https://res.cloudinary.com/ditd1epqb/image/upload/v1761924973/ChatGPT_Image_Oct_31_2025_04_34_28_PM_lvuud6.png"
+        />
+      </router-link>
 
-      <p v-if="errorMsg" class="alert alert-danger">{{ errorMsg }}</p>
+      <div class="auth-card">
+        <h2 class="title">Prijava</h2>
 
-      <form @submit.prevent="login" class="auth-form">
-        <div class="form-group">
-          <label class="form-label">Email ili korisničko ime</label>
-          <input
-            v-model="identifier"
-            type="text"
-            class="form-control"
-            required
-            placeholder="Unesi email ili korisničko ime"
-          />
-        </div>
+        <p v-if="errorMsg" class="alert alert-danger">{{ errorMsg }}</p>
 
-        <div class="form-group">
-          <label class="form-label">Lozinka</label>
-          <input
-            v-model="password"
-            type="password"
-            class="form-control"
-            required
-            placeholder="Lozinka"
-          />
-        </div>
+        <form @submit.prevent="login" class="auth-form">
+          <div class="form-group">
+            <label class="form-label">Email ili korisničko ime</label>
+            <input
+              v-model="identifier"
+              type="text"
+              class="form-control"
+              required
+              placeholder="Unesi email ili korisničko ime"
+              autocomplete="username"
+            />
+          </div>
 
-        <button class="btn submit-btn" :disabled="loading">
-          {{ loading ? "Prijava…" : "Prijavi se" }}
-        </button>
+          <div class="form-group">
+            <label class="form-label">Lozinka</label>
+            <input
+              v-model="password"
+              type="password"
+              class="form-control"
+              required
+              placeholder="Lozinka"
+              autocomplete="current-password"
+            />
+          </div>
 
-        <p class="small note">
-          Nemaš račun?
-          <router-link to="/register" class="link">Registriraj se</router-link>
-        </p>
-      </form>
+          <button
+            class="btn submit-btn"
+            :disabled="loading || !identifier || !password"
+          >
+            {{ loading ? "Prijava…" : "Prijavi se" }}
+          </button>
+
+          <p class="small note">
+            Nemaš račun?
+            <router-link to="/register" class="link"
+              >Registriraj se</router-link
+            >
+          </p>
+        </form>
+      </div>
     </div>
   </div>
 </template>
@@ -87,12 +105,29 @@ async function login() {
   position: fixed;
   inset: 0;
   padding: 3rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
     url("https://res.cloudinary.com/ditd1epqb/image/upload/v1761920929/pexels-pablo-gomez-2151419725-33614966_zhx1mo.jpg")
       center/cover no-repeat;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo-link {
+  display: inline-block;
+}
+.auth-logo {
+  width: clamp(200px, 16vw, 150px);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.55));
+  user-select: none;
 }
 
 .auth-card {
@@ -112,7 +147,7 @@ async function login() {
   font-size: 28px;
   letter-spacing: 0.3px;
   text-align: center;
-  color: #2596be;
+  color: #fff;
 }
 
 .alert {
@@ -133,7 +168,6 @@ async function login() {
   grid-template-columns: 1fr 1fr;
   gap: 14px 18px;
 }
-
 .form-group {
   display: flex;
   flex-direction: column;
@@ -146,23 +180,36 @@ async function login() {
   font-size: 14px;
 }
 
-.form-control {
+.auth-card .form-control {
   height: 46px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  caret-color: #ffffff;
   padding: 0 12px;
   transition: 0.2s ease;
+  font-weight: 600;
 }
-.form-control::placeholder {
-  color: rgba(255, 255, 255, 0.95);
+.auth-card .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.9) !important;
 }
-.form-control:focus {
+.auth-card .form-control:focus {
   outline: none;
-  border-color: rgba(37, 150, 190, 0.9);
-  box-shadow: 0 0 0 4px rgba(37, 150, 190, 0.28);
-  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(37, 150, 190, 0.9) !important;
+  box-shadow: 0 0 0 4px rgba(37, 150, 190, 0.28) !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+.auth-card input:-webkit-autofill {
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff;
+  transition: background-color 9999s ease-in-out 0s;
+  box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.1) inset !important;
+}
+.auth-card input:-moz-autofill {
+  box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.1) inset !important;
+  -moz-text-fill-color: #ffffff !important;
 }
 
 .submit-btn {

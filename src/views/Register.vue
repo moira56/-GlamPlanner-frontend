@@ -47,68 +47,82 @@ async function register() {
 
 <template>
   <div class="auth-bg">
-    <div class="auth-card">
-      <h2 class="title">Registracija</h2>
+    <div class="stack">
+      <router-link to="/" class="logo-link" aria-label="GlamPlanner početna">
+        <img
+          class="auth-logo"
+          alt="GlamPlanner logo"
+          src="https://res.cloudinary.com/ditd1epqb/image/upload/v1761924973/ChatGPT_Image_Oct_31_2025_04_34_28_PM_lvuud6.png"
+        />
+      </router-link>
 
-      <p v-if="errorMsg" class="alert alert-danger">{{ errorMsg }}</p>
-      <p v-if="successMsg" class="alert alert-success">{{ successMsg }}</p>
+      <div class="auth-card">
+        <h2 class="title">Registracija</h2>
 
-      <form class="auth-form" @submit.prevent="register">
-        <div class="form-group">
-          <label class="form-label">Korisničko ime</label>
-          <input
-            v-model="username"
-            placeholder="Username"
-            required
-            minlength="3"
-            class="form-control"
-          />
-        </div>
+        <p v-if="errorMsg" class="alert alert-danger">{{ errorMsg }}</p>
+        <p v-if="successMsg" class="alert alert-success">{{ successMsg }}</p>
 
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input
-            v-model="email"
-            type="email"
-            placeholder="Email"
-            required
-            class="form-control"
-          />
-        </div>
+        <form class="auth-form" @submit.prevent="register">
+          <div class="form-group">
+            <label class="form-label">Korisničko ime</label>
+            <input
+              v-model="username"
+              placeholder="Username"
+              required
+              minlength="3"
+              class="form-control"
+              autocomplete="username"
+            />
+          </div>
 
-        <div class="form-group">
-          <label class="form-label">Lozinka</label>
-          <input
-            v-model="password"
-            type="password"
-            placeholder="Password"
-            required
-            minlength="8"
-            class="form-control"
-          />
-        </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input
+              v-model="email"
+              type="email"
+              placeholder="Email"
+              required
+              class="form-control"
+              autocomplete="email"
+            />
+          </div>
 
-        <div class="form-group">
-          <label class="form-label">Potvrdi lozinku</label>
-          <input
-            v-model="confirm"
-            type="password"
-            placeholder="Confirm password"
-            required
-            minlength="8"
-            class="form-control"
-          />
-        </div>
+          <div class="form-group">
+            <label class="form-label">Lozinka</label>
+            <input
+              v-model="password"
+              type="password"
+              placeholder="Password"
+              required
+              minlength="8"
+              class="form-control"
+              autocomplete="new-password"
+            />
+          </div>
 
-        <button class="btn submit-btn" :disabled="loading">
-          {{ loading ? "Registriram…" : "Registriraj se" }}
-        </button>
+          <div class="form-group">
+            <label class="form-label">Potvrdi lozinku</label>
+            <input
+              v-model="confirm"
+              type="password"
+              placeholder="Confirm password"
+              required
+              minlength="8"
+              class="form-control"
+              autocomplete="new-password"
+            />
+          </div>
 
-        <p class="small note">
-          Već imaš račun?
-          <router-link to="/login" class="link">Prijava</router-link>
-        </p>
-      </form>
+          <button class="btn submit-btn" :disabled="loading">
+            {{ loading ? "Registriram…" : "Registriraj se" }}
+          </button>
+
+          <p class="small note">
+            Već imaš račun?
+            <router-link to="/login" class="link">Prijava</router-link>
+          </p>
+        </form>
+      </div>
     </div>
   </div>
 </template>
@@ -126,12 +140,29 @@ async function register() {
   position: fixed;
   inset: 0;
   padding: 3rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
     url("https://res.cloudinary.com/ditd1epqb/image/upload/v1761920929/pexels-pablo-gomez-2151419725-33614966_zhx1mo.jpg")
       center/cover no-repeat;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo-link {
+  display: inline-block;
+}
+.auth-logo {
+  width: clamp(200px, 16vw, 150px);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.55));
+  user-select: none;
 }
 
 .auth-card {
@@ -151,7 +182,7 @@ async function register() {
   font-size: 28px;
   letter-spacing: 0.3px;
   text-align: center;
-  color: #a65077;
+  color: #fff;
 }
 
 .alert {
@@ -175,7 +206,6 @@ async function register() {
   grid-template-columns: 1fr 1fr;
   gap: 14px 18px;
 }
-
 .form-group {
   display: flex;
   flex-direction: column;
@@ -188,23 +218,36 @@ async function register() {
   font-size: 14px;
 }
 
-.form-control {
+.auth-card .form-control {
   height: 46px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  caret-color: #ffffff;
   padding: 0 12px;
   transition: 0.2s ease;
+  font-weight: 600;
 }
-.form-control::placeholder {
-  color: rgba(255, 255, 255, 0.95);
+.auth-card .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.9) !important;
 }
-.form-control:focus {
+.auth-card .form-control:focus {
   outline: none;
-  border-color: rgba(166, 80, 119, 0.9);
-  box-shadow: 0 0 0 4px rgba(166, 80, 119, 0.28);
-  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(166, 80, 119, 0.9) !important;
+  box-shadow: 0 0 0 4px rgba(166, 80, 119, 0.28) !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+.auth-card input:-webkit-autofill {
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff;
+  transition: background-color 9999s ease-in-out 0s;
+  box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.1) inset !important;
+}
+.auth-card input:-moz-autofill {
+  box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.1) inset !important;
+  -moz-text-fill-color: #ffffff !important;
 }
 
 .submit-btn {
