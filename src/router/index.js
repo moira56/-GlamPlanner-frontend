@@ -17,6 +17,17 @@ const routes = [
     name: "tips",
     component: () => import("../views/Savjeti.vue"),
   },
+  {
+    path: "/events",
+    name: "events",
+    component: () => import("../views/Događaji.vue"),
+  },
+  {
+    path: "/events/:id",
+    name: "event-details",
+    component: () => import("../views/DogađajDetalji.vue"),
+    props: true,
+  },
 ];
 
 export default createRouter({
