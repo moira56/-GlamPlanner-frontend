@@ -31,4 +31,8 @@ body {
       center / cover no-repeat fixed;
   color: var(--text-on-dark);
 }
+html,
+body {
+  overflow-y: hidden;
+}
 </style>

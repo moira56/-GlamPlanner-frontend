@@ -4,10 +4,19 @@ import Register from "../views/Register.vue";
 import Home from "../views/Home.vue";
 
 const routes = [
-  { path: "/", redirect: "/login" },
+  { path: "/", name: "home", component: Home },
   { path: "/login", name: "login", component: Login },
   { path: "/register", name: "register", component: Register },
-  { path: "/", name: "home", component: Home },
+  {
+    path: "/about",
+    name: "about",
+    component: () => import("../views/Oaplikaciji.vue"),
+  },
+  {
+    path: "/tips",
+    name: "tips",
+    component: () => import("../views/Savjeti.vue"),
+  },
 ];
 
 export default createRouter({

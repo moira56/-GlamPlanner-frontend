@@ -33,7 +33,6 @@ function logout() {
           alt="GlamPlanner logo"
           src="https://res.cloudinary.com/ditd1epqb/image/upload/v1761924973/ChatGPT_Image_Oct_31_2025_04_34_28_PM_lvuud6.png"
         />
-        <span class="brand"></span>
       </div>
 
       <nav class="nav-center">
@@ -63,87 +62,72 @@ function logout() {
       </div>
     </header>
 
-    <div class="nav-spacer"></div>
-
-    <section class="hero">
-      <div class="glass">
-        <h1 class="h-title">Dobrodošli u <span>GlamPlanner</span></h1>
-        <p class="h-sub">
-          Tvoj osobni planer šminkanja — isplaniraj korake, odaberi proizvode,
-          spremi look i blistaj bez stresa.
-        </p>
-        <div class="cta-row">
-          <button
-            v-if="isAuthed"
-            class="btn primary"
-            @click="go('/events/new')"
-          >
-            Započni plan
-          </button>
-          <button v-else class="btn primary" @click="go('/register')">
-            Registriraj se besplatno
-          </button>
-          <button class="btn ghost" @click="go('/about')">
-            Pogledaj kako radi
-          </button>
+    <main class="content">
+      <section class="hero">
+        <div class="glass">
+          <h1 class="h-title">Dobrodošli u <span>GlamPlanner</span></h1>
+          <p class="h-sub">
+            Tvoj osobni planer šminkanja — isplaniraj korake, odaberi proizvode,
+            spremi look i blistaj bez stresa.
+          </p>
+          <div class="cta-row">
+            <button
+              v-if="isAuthed"
+              class="btn primary"
+              @click="go('/events/new')"
+            >
+              Započni plan
+            </button>
+            <button v-else class="btn primary" @click="go('/register')">
+              Registriraj se besplatno
+            </button>
+            <button class="btn ghost" @click="go('/about')">
+              Pogledaj kako radi
+            </button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="features">
-      <div class="f-grid">
-        <article
-          class="f-card"
-          @click="go('/plans')"
-          role="button"
-          tabindex="0"
-        >
-          <h3>Brzi plan</h3>
-          <p>
-            Predloženi koraci šminkanja (bazni ten, oči, usne) – prilagodi ih
-            svom događaju u par klikova.
-          </p>
-          <span class="f-link">Otvori planove →</span>
-        </article>
+      <section class="features">
+        <div class="f-grid">
+          <article class="f-card" @click="go('/plans')">
+            <h3>Brzi plan</h3>
+            <p>
+              Predloženi koraci šminkanja (bazni ten, oči, usne) – prilagodi ih
+              svom događaju u par klikova.
+            </p>
+            <span class="f-link">Otvori planove →</span>
+          </article>
 
-        <article
-          class="f-card"
-          @click="go('/events')"
-          role="button"
-          tabindex="0"
-        >
-          <h3>Predlošci događaja</h3>
-          <p>
-            Vjenčanje, matura, poslovni sastanak… svaki predložak nosi primjer
-            stila i vremensku liniju.
-          </p>
-          <span class="f-link">Pregled događaja →</span>
-        </article>
+          <article class="f-card" @click="go('/events')">
+            <h3>Predlošci događaja</h3>
+            <p>
+              Vjenčanje, matura, poslovni sastanak… svaki predložak nosi primjer
+              stila i vremensku liniju.
+            </p>
+            <span class="f-link">Pregled događaja →</span>
+          </article>
 
-        <article
-          class="f-card"
-          @click="go('/gallery')"
-          role="button"
-          tabindex="0"
-        >
-          <h3>Galerija lookova</h3>
-          <p>
-            Spremi fotografije nakon šminkanja, dodaj proizvode i zabilješke za
-            savršenu reprizu.
-          </p>
-          <span class="f-link">Otvori galeriju →</span>
-        </article>
+          <article class="f-card" @click="go('/gallery')">
+            <h3>Galerija lookova</h3>
+            <p>
+              Spremi fotografije nakon šminkanja, dodaj proizvode i zabilješke
+              za savršenu reprizu.
+            </p>
+            <span class="f-link">Otvori galeriju →</span>
+          </article>
 
-        <article class="f-card" @click="go('/tips')" role="button" tabindex="0">
-          <h3>Savjeti po tipu događaja</h3>
-          <p>
-            Mat vs. dewy ten, dugotrajnost ruža, raspon nijansi – preporuke
-            prema prigodi i trajanju.
-          </p>
-          <span class="f-link">Pročitaj savjete →</span>
-        </article>
-      </div>
-    </section>
+          <article class="f-card" @click="go('/tips')">
+            <h3>Savjeti po tipu događaja</h3>
+            <p>
+              Mat vs. dewy ten, dugotrajnost ruža, raspon nijansi – preporuke
+              prema prigodi i trajanju.
+            </p>
+            <span class="f-link">Pročitaj savjete →</span>
+          </article>
+        </div>
+      </section>
+    </main>
   </div>
 </template>
 
@@ -151,7 +135,7 @@ function logout() {
 :root {
   --brand-primary: #2596be;
   --brand-accent: #a65077;
-  --nav-h: 86px;
+  --nav-h: 90px;
   --hero-h: 52vh;
 }
 
@@ -159,6 +143,9 @@ function logout() {
   width: 100%;
   min-height: 100vh;
   color: #fff;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
+    url("https://res.cloudinary.com/ditd1epqb/image/upload/v1761920929/pexels-pablo-gomez-2151419725-33614966_zhx1mo.jpg")
+      center/cover no-repeat fixed;
 }
 
 .nav {
@@ -173,34 +160,18 @@ function logout() {
   align-items: center;
   gap: 18px;
   padding: 0 24px;
-  padding-left: calc(24px + env(safe-area-inset-left));
-  padding-right: calc(24px + env(safe-area-inset-right));
   backdrop-filter: blur(10px);
   background: rgba(20, 22, 24, 0.5);
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
   color: #fff;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 }
-.nav-spacer {
-  height: var(--nav-h);
-}
 
-.nav-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  cursor: pointer;
-}
 .logo {
   width: 80px;
   height: 80px;
   object-fit: contain;
   border-radius: 14px;
-}
-.brand {
-  font-weight: 900;
-  letter-spacing: 0.3px;
-  font-size: 1.25rem;
 }
 
 .nav-center {
@@ -209,6 +180,7 @@ function logout() {
   justify-content: center;
   flex-wrap: wrap;
 }
+
 .nav-right {
   display: flex;
   gap: 14px;
@@ -259,16 +231,18 @@ function logout() {
   margin: 0 6px;
 }
 
+.content {
+  padding-top: calc(var(--nav-h) + 900px);
+}
+
 .hero {
   min-height: var(--hero-h);
-  padding: 0 18px 10px;
+  padding: 350px 18px 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
-    url("https://res.cloudinary.com/ditd1epqb/image/upload/v1761920929/pexels-pablo-gomez-2151419725-33614966_zhx1mo.jpg")
-      center/cover no-repeat fixed;
 }
+
 .glass {
   width: min(900px, 96vw);
   padding: 20px 22px 18px;
@@ -283,11 +257,11 @@ function logout() {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
   text-align: center;
 }
+
 .h-title {
   margin: 0 0 6px 0;
   font-size: clamp(26px, 3.8vw, 40px);
   font-weight: 900;
-  letter-spacing: 0.3px;
   color: #fff;
 }
 .h-title span {
@@ -323,7 +297,7 @@ function logout() {
 }
 
 .features {
-  margin-top: 8px;
+  margin-top: 20px;
   padding: 0 18px 36px;
 }
 .f-grid {
@@ -374,7 +348,6 @@ function logout() {
 @media (max-width: 820px) {
   :root {
     --nav-h: 72px;
-    --hero-h: 60vh;
   }
   .logo {
     width: 58px;
@@ -382,9 +355,6 @@ function logout() {
   }
   .nav-center {
     display: none;
-  }
-  .glass {
-    width: min(96vw, 720px);
   }
   .f-grid {
     grid-template-columns: 1fr;
