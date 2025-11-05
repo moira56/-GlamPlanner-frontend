@@ -6,10 +6,13 @@ const router = useRouter();
 const route = useRoute();
 
 const token = ref(localStorage.getItem("token"));
+const role = ref(localStorage.getItem("role"));
 const isAuthed = computed(() => !!token.value);
+const isAdmin = computed(() => role.value === "admin");
 
 function handleStorage(e) {
   if (e.key === "token") token.value = e.newValue;
+  if (e.key === "role") role.value = e.newValue;
 }
 onMounted(() => window.addEventListener("storage", handleStorage));
 onUnmounted(() => window.removeEventListener("storage", handleStorage));
@@ -19,7 +22,9 @@ function go(path) {
 }
 function logout() {
   localStorage.removeItem("token");
+  localStorage.removeItem("role");
   token.value = null;
+  role.value = null;
   router.push("/login");
 }
 </script>
@@ -46,13 +51,17 @@ function logout() {
 
       <div class="nav-right">
         <template v-if="isAuthed">
-          <button class="btn cta" @click="go('/events/new')">
-            + Novi događaj
-          </button>
-          <div class="divider"></div>
+          <template v-if="isAdmin">
+            <button class="btn cta" @click="go('/events/new')">
+              + Novi događaj
+            </button>
+            <div class="divider"></div>
+          </template>
+
           <button class="link" @click="go('/profile')">Profil</button>
           <button class="link" @click="logout">Odjava</button>
         </template>
+
         <template v-else>
           <button class="link" @click="go('/login')">Prijava</button>
           <button class="btn accent" @click="go('/register')">
@@ -96,7 +105,7 @@ function logout() {
 
           <p class="end">
             GlamPlanner je tvoj beauty partner — jer svaka prilika zaslužuje
-            planiran sjaj
+            planiran sjaj.
           </p>
         </div>
       </section>
@@ -236,7 +245,6 @@ function logout() {
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 14px 50px rgba(0, 0, 0, 0.45);
   text-align: center;
-
   margin-left: -110px;
 }
 .about-image {
@@ -280,6 +288,7 @@ li {
   .about-box {
     width: 90%;
     padding: 40px 24px 60px;
+    margin-left: 0;
   }
   .about-image {
     width: 100%;

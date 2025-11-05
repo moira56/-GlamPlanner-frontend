@@ -6,6 +6,8 @@ const email = ref("");
 const username = ref("");
 const password = ref("");
 const confirm = ref("");
+const role = ref("user");
+
 const loading = ref(false);
 const errorMsg = ref("");
 const successMsg = ref("");
@@ -17,6 +19,7 @@ function resetMessages() {
 
 async function register() {
   resetMessages();
+
   if (password.value !== confirm.value) {
     errorMsg.value = "Lozinke se ne podudaraju.";
     return;
@@ -25,13 +28,16 @@ async function register() {
     errorMsg.value = "Lozinka mora imati najmanje 8 znakova.";
     return;
   }
+
   loading.value = true;
   try {
     const { data } = await api.post("/register", {
       email: email.value,
       username: username.value,
       password: password.value,
+      role: role.value,
     });
+
     localStorage.setItem("token", data.token);
     successMsg.value = "Registracija uspješna!";
   } catch (err) {
@@ -113,6 +119,14 @@ async function register() {
             />
           </div>
 
+          <div class="form-group">
+            <label class="form-label">Uloga</label>
+            <select v-model="role" class="form-control">
+              <option value="user">Korisnik</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </div>
+
           <button class="btn submit-btn" :disabled="loading">
             {{ loading ? "Registriram…" : "Registriraj se" }}
           </button>
@@ -157,6 +171,7 @@ async function register() {
 .logo-link {
   display: inline-block;
 }
+
 .auth-logo {
   width: clamp(200px, 16vw, 150px);
   height: auto;
@@ -206,6 +221,7 @@ async function register() {
   grid-template-columns: 1fr 1fr;
   gap: 14px 18px;
 }
+
 .form-group {
   display: flex;
   flex-direction: column;
@@ -239,15 +255,9 @@ async function register() {
   background: rgba(255, 255, 255, 0.18) !important;
 }
 
-.auth-card input:-webkit-autofill {
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff;
-  transition: background-color 9999s ease-in-out 0s;
-  box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.1) inset !important;
-}
-.auth-card input:-moz-autofill {
-  box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.1) inset !important;
-  -moz-text-fill-color: #ffffff !important;
+select.form-control option {
+  background-color: #222428;
+  color: #fff;
 }
 
 .submit-btn {

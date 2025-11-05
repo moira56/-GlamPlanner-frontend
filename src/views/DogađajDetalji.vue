@@ -6,10 +6,13 @@ const router = useRouter();
 const route = useRoute();
 
 const token = ref(localStorage.getItem("token"));
+const role = ref(localStorage.getItem("role"));
 const isAuthed = computed(() => !!token.value);
+const isAdmin = computed(() => role.value === "admin");
 
 function handleStorage(e) {
   if (e.key === "token") token.value = e.newValue;
+  if (e.key === "role") role.value = e.newValue;
 }
 onMounted(() => window.addEventListener("storage", handleStorage));
 onUnmounted(() => window.removeEventListener("storage", handleStorage));
@@ -19,7 +22,9 @@ function go(path) {
 }
 function logout() {
   localStorage.removeItem("token");
+  localStorage.removeItem("role");
   token.value = null;
+  role.value = null;
   router.push("/login");
 }
 
@@ -78,13 +83,17 @@ const looks = [
 
       <div class="nav-right">
         <template v-if="isAuthed">
-          <button class="btn cta" @click="go('/events/new')">
-            + Novi događaj
-          </button>
-          <div class="divider"></div>
+          <template v-if="isAdmin">
+            <button class="btn cta" @click="go('/events/new')">
+              + Novi događaj
+            </button>
+            <div class="divider"></div>
+          </template>
+
           <button class="link" @click="go('/profile')">Profil</button>
           <button class="link" @click="logout">Odjava</button>
         </template>
+
         <template v-else>
           <button class="link" @click="go('/login')">Prijava</button>
           <button class="btn accent" @click="go('/register')">
@@ -96,29 +105,21 @@ const looks = [
 
     <main class="content">
       <section class="details-hero">
-        <h1>{{ route.params.id.toUpperCase() }}</h1>
-        <p>Odaberi željeni stil šminke za ovaj događaj:</p>
+        <h1>💋 Detalji događaja — {{ route.params.id.toUpperCase() }}</h1>
+        <p>
+          Ovdje možeš vidjeti preporučene stilove šminke za odabrani događaj i
+          korake za savršen izgled.
+        </p>
       </section>
 
-      <div class="look-options">
-        <button
-          v-for="look in looks"
-          :key="look.id"
-          :class="{ active: selectedLook === look.id }"
-          @click="selectedLook = look.id"
-        >
-          {{ look.name }}
-        </button>
-      </div>
-
-      <div v-if="selectedLook" class="look-details">
-        <h2>Koraci šminkanja</h2>
-        <ul>
-          <li v-for="step in looks.find((l) => l.id === selectedLook).steps">
-            {{ step }}
-          </li>
-        </ul>
-      </div>
+      <section class="details-grid">
+        <div class="detail-card" v-for="look in looks" :key="look.id">
+          <h2>{{ look.name }}</h2>
+          <ul>
+            <li v-for="step in look.steps" :key="step">{{ step }}</li>
+          </ul>
+        </div>
+      </section>
     </main>
   </div>
 </template>
@@ -247,46 +248,40 @@ const looks = [
   margin: 0 auto 40px;
 }
 
-.look-options {
-  margin: 40px 0;
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-  flex-wrap: wrap;
-}
-button {
-  background: rgba(255, 255, 255, 0.12);
-  border: 2px solid transparent;
-  color: #fff;
-  padding: 10px 18px;
-  border-radius: 999px;
-  cursor: pointer;
-  font-weight: 700;
-  transition: all 0.3s;
-}
-button:hover {
-  border-color: #2596be;
-}
-button.active {
-  background: linear-gradient(135deg, #a65077, #2596be);
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 22px;
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
-.look-details {
-  margin-top: 30px;
-  text-align: left;
-  max-width: 500px;
-  margin-inline: auto;
+.detail-card {
   background: rgba(34, 36, 40, 0.6);
-  padding: 20px 30px;
   border-radius: 20px;
+  padding: 24px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
-.look-details ul {
+.detail-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.55);
+  border-color: rgba(37, 150, 190, 0.5);
+}
+.detail-card h2 {
+  margin-bottom: 10px;
+  font-size: 1.3rem;
+  color: #fff;
+}
+.detail-card ul {
   list-style: none;
   padding: 0;
 }
-.look-details li {
-  margin: 10px 0;
+.detail-card li {
+  font-size: 1rem;
+  opacity: 0.9;
+  margin: 6px 0;
 }
 
 @media (max-width: 820px) {

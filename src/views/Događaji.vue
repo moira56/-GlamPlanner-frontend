@@ -6,10 +6,13 @@ const router = useRouter();
 const route = useRoute();
 
 const token = ref(localStorage.getItem("token"));
+const role = ref(localStorage.getItem("role"));
 const isAuthed = computed(() => !!token.value);
+const isAdmin = computed(() => role.value === "admin");
 
 function handleStorage(e) {
   if (e.key === "token") token.value = e.newValue;
+  if (e.key === "role") role.value = e.newValue;
 }
 onMounted(() => window.addEventListener("storage", handleStorage));
 onUnmounted(() => window.removeEventListener("storage", handleStorage));
@@ -19,7 +22,9 @@ function go(path) {
 }
 function logout() {
   localStorage.removeItem("token");
+  localStorage.removeItem("role");
   token.value = null;
+  role.value = null;
   router.push("/login");
 }
 
@@ -95,13 +100,17 @@ function openEvent(event) {
 
       <div class="nav-right">
         <template v-if="isAuthed">
-          <button class="btn cta" @click="go('/events/new')">
-            + Novi događaj
-          </button>
-          <div class="divider"></div>
+          <template v-if="isAdmin">
+            <button class="btn cta" @click="go('/events/new')">
+              + Novi događaj
+            </button>
+            <div class="divider"></div>
+          </template>
+
           <button class="link" @click="go('/profile')">Profil</button>
           <button class="link" @click="logout">Odjava</button>
         </template>
+
         <template v-else>
           <button class="link" @click="go('/login')">Prijava</button>
           <button class="btn accent" @click="go('/register')">
