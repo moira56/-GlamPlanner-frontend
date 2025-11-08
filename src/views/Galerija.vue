@@ -28,42 +28,84 @@ function logout() {
   router.push("/login");
 }
 
-const newImageUrl = ref("");
+const gallery = ref([]);
 const newImageDesc = ref("");
 const fullscreenImg = ref(null);
+const loading = ref(false);
 
-const gallery = ref([
-  {
-    url: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762368839/d5994ff8-8006-4523-ba75-d2c2f4e047e6_oecssj.png",
-    desc: "Prirodni make-up sa sjajnim usnama i nježnim rumenilom — idealan za dnevne prilike.",
-  },
-  {
-    url: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762368837/c9eb81a5-b04e-4c64-8fbd-0042f456ba08_moxhrm.png",
-    desc: "Lagani ten, maskara i nježna nijansa ruža — jednostavno i elegantno.",
-  },
-]);
-
-function addImage() {
-  if (!newImageUrl.value.trim()) return;
-  gallery.value.push({
-    url: newImageUrl.value,
-    desc: newImageDesc.value || "Bez opisa.",
-  });
-  newImageUrl.value = "";
-  newImageDesc.value = "";
+async function fetchGallery() {
+  try {
+    const res = await fetch("http://localhost:3000/api/gallery");
+    if (!res.ok) throw new Error("Neuspjelo dohvaćanje galerije");
+    gallery.value = await res.json();
+  } catch (err) {
+    console.error(err);
+  }
 }
 
-function removeImage(index) {
-  gallery.value.splice(index, 1);
+async function uploadImage(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  loading.value = true;
+  try {
+    const uploadRes = await fetch("http://localhost:3000/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const uploadData = await uploadRes.json();
+    if (!uploadRes.ok)
+      throw new Error(uploadData.message || "Upload nije uspio");
+
+    const saveRes = await fetch("http://localhost:3000/api/gallery", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token.value}`,
+      },
+      body: JSON.stringify({
+        url: uploadData.secure_url,
+        desc: newImageDesc.value,
+      }),
+    });
+
+    if (!saveRes.ok) throw new Error("Spremanje slike nije uspjelo");
+
+    await fetchGallery();
+    newImageDesc.value = "";
+  } catch (err) {
+    alert("Greška: " + err.message);
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function removeImage(id) {
+  if (!confirm("Sigurno želiš obrisati ovu sliku?")) return;
+  try {
+    const res = await fetch(`http://localhost:3000/api/gallery/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token.value}` },
+    });
+    if (!res.ok) throw new Error("Brisanje nije uspjelo");
+    await fetchGallery();
+  } catch (err) {
+    alert("Greška: " + err.message);
+  }
 }
 
 function toggleFullscreen(image) {
   fullscreenImg.value = fullscreenImg.value === image ? null : image;
 }
+
+onMounted(fetchGallery);
 </script>
 
 <template>
-  <div class="tips">
+  <div class="page-wrapper">
     <header class="nav">
       <div class="nav-left" @click="go('/')">
         <img
@@ -114,35 +156,27 @@ function toggleFullscreen(image) {
       </section>
 
       <section class="add-section" v-if="isAuthed">
-        <input
-          v-model="newImageUrl"
-          type="text"
-          placeholder="Zalijepi URL slike..."
-        />
+        <input type="file" accept="image/*" @change="uploadImage" />
         <textarea
           v-model="newImageDesc"
           placeholder="Dodaj opis, savjet ili preporuku proizvoda..."
         ></textarea>
-        <button class="btn accent" @click="addImage">Dodaj sliku</button>
+        <div v-if="loading" class="uploading">📤 Uploadam sliku...</div>
       </section>
 
       <section class="gallery-grid">
-        <div
-          v-for="(image, index) in gallery"
-          :key="index"
-          class="gallery-item"
-        >
-          <img :src="image.url" alt="" @click="toggleFullscreen(image)" />
+        <div v-for="img in gallery" :key="img._id" class="gallery-item">
+          <img :src="img.url" alt="" @click="toggleFullscreen(img)" />
           <div class="overlay">
             <button
               v-if="isAdmin"
               class="delete-btn"
-              @click.stop="removeImage(index)"
+              @click.stop="removeImage(img._id)"
             >
               ✕
             </button>
           </div>
-          <p class="desc">{{ image.desc }}</p>
+          <p class="desc">{{ img.desc }}</p>
         </div>
       </section>
 
@@ -159,6 +193,37 @@ function toggleFullscreen(image) {
   </div>
 </template>
 
+<style>
+html,
+body,
+#app {
+  min-height: 100vh !important;
+  height: auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
+    url("https://res.cloudinary.com/ditd1epqb/image/upload/v1761920929/pexels-pablo-gomez-2151419725-33614966_zhx1mo.jpg")
+      center/cover no-repeat;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+</style>
+
 <style scoped>
 :root {
   --brand-primary: #2596be;
@@ -166,15 +231,10 @@ function toggleFullscreen(image) {
   --nav-h: 90px;
 }
 
-.tips {
-  width: 100%;
+.page-wrapper {
   min-height: 100vh;
-  overflow-y: auto;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
-    url("https://res.cloudinary.com/ditd1epqb/image/upload/v1761920929/pexels-pablo-gomez-2151419725-33614966_zhx1mo.jpg")
-      center/cover no-repeat fixed;
-  color: #fff;
-  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .nav {
@@ -263,9 +323,10 @@ function toggleFullscreen(image) {
 }
 
 .content {
-  margin-top: calc(var(--nav-h) + 140px);
-  padding: 80px 40px 80px;
+  margin-top: calc(var(--nav-h) + 120px);
+  padding: 80px 40px 300px;
   text-align: center;
+  flex: 1;
 }
 
 .gallery-hero h1 {
@@ -298,15 +359,7 @@ function toggleFullscreen(image) {
   border: none;
   outline: none;
   font-size: 1rem;
-}
-.add-section textarea {
-  resize: none;
-  height: 80px;
-}
-.add-section .btn {
-  padding: 10px 20px;
-  font-weight: 700;
-  border-radius: 999px;
+  background: rgba(34, 36, 40, 0.6);
 }
 
 .gallery-grid {
@@ -370,5 +423,31 @@ function toggleFullscreen(image) {
 .fade-leave-to {
   opacity: 0;
   transform: scale(0.95);
+}
+
+.gallery-hero p,
+.add-section textarea,
+.add-section input,
+.desc,
+.uploading,
+.link {
+  color: #fff !important;
+}
+
+.add-section textarea::placeholder,
+.add-section input::placeholder {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.gallery-hero h1 {
+  background: linear-gradient(90deg, var(--brand-accent), var(--brand-primary));
+  -webkit-background-clip: text;
+  color: transparent;
+  text-shadow: none;
+}
+
+.gallery-hero p,
+.desc {
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
 }
 </style>
