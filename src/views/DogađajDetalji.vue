@@ -34,28 +34,62 @@ const looks = [
   {
     id: "natural",
     name: "Prirodni look 🌿",
-    steps: [
-      "Lagani tekući puder i korektor",
-      "Neutralna sjenila i maskara",
-      "Ruž u nijansi usana",
+    desc: "Lagani i prirodan izgled za svježinu tijekom dana.",
+    products: [
+      {
+        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365688/rvob4mlfdt70_vvh2km.jpg",
+        name: "Rumenilo",
+      },
+      {
+        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365689/puow2hr6jttc_c7amga.jpg",
+        name: "Maskara",
+      },
+      {
+        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365685/melem-cold-cream-hranjivi-balzam-za-usne-_yyfocx.jpg",
+        name: "Balzam za usne",
+      },
+      {
+        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365685/Bionike-DEFENCE-Hydractive-SPF-15-BB-krema-40-ml_bhjyan.jpg",
+        name: "BB krema",
+      },
     ],
   },
   {
     id: "classic",
     name: "Klasični glam ✨",
-    steps: [
-      "Puna pokrivnost i contouring",
-      "Zlatna ili roza sjenila",
-      "Mat ruž i highlighter",
+    desc: "Elegantni i profinjeni make-up koji pristaje svakoj prigodi.",
+    products: [
+      {
+        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000003/foundation_full.jpg",
+        name: "Tečni puder s punom pokrivnošću",
+      },
+      {
+        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000004/eyeshadow.jpg",
+        name: "Zlatna sjenila",
+      },
+      {
+        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000005/highlighter.jpg",
+        name: "Highlighter",
+      },
     ],
   },
   {
     id: "bold",
     name: "Intenzivni večernji look 💎",
-    steps: [
-      "Smokey eyes s umjetnim trepavicama",
-      "Tamniji ruž (bordo, vino)",
-      "Fiksator za dugotrajnost",
+    desc: "Smokey eyes, dramatične boje i dugotrajni završni sloj.",
+    products: [
+      {
+        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000006/smokey.jpg",
+        name: "Paleta tamnih sjenila",
+      },
+      {
+        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000007/lipstick.jpg",
+        name: "Mat ruž tamne boje",
+      },
+      {
+        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000008/fixspray.jpg",
+        name: "Fiksator šminke",
+      },
     ],
   },
 ];
@@ -89,7 +123,6 @@ const looks = [
             </button>
             <div class="divider"></div>
           </template>
-
           <button class="link" @click="go('/profile')">Profil</button>
           <button class="link" @click="logout">Odjava</button>
         </template>
@@ -112,14 +145,56 @@ const looks = [
         </p>
       </section>
 
-      <section class="details-grid">
-        <div class="detail-card" v-for="look in looks" :key="look.id">
-          <h2>{{ look.name }}</h2>
-          <ul>
-            <li v-for="step in look.steps" :key="step">{{ step }}</li>
-          </ul>
+      <div class="look-tabs">
+        <div
+          v-for="look in looks"
+          :key="look.id"
+          class="look-tab"
+          :class="{ active: selectedLook === look.id }"
+          @click="selectedLook = look.id"
+        >
+          {{ look.name }}
         </div>
-      </section>
+      </div>
+
+      <transition name="fade">
+        <div
+          v-if="
+            selectedLook &&
+            [
+              'fotografiranje',
+              'poslovni sastanak',
+              'fotkanje',
+              'posao',
+            ].includes(route.params.id.toLowerCase())
+          "
+          class="detail-card"
+        >
+          <h2>{{ looks.find((l) => l.id === selectedLook)?.name }}</h2>
+          <p class="look-desc">
+            {{ looks.find((l) => l.id === selectedLook)?.desc }}
+          </p>
+
+          <div class="product-gallery">
+            <div
+              v-for="p in looks.find((l) => l.id === selectedLook)?.products"
+              :key="p.name"
+              class="product-card"
+            >
+              <img :src="p.img" :alt="p.name" />
+              <span>{{ p.name }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-else-if="selectedLook" class="detail-card">
+          <h2>{{ looks.find((l) => l.id === selectedLook)?.name }}</h2>
+          <p style="opacity: 0.85">
+            Još nema preporučenih proizvoda za ovaj događaj. Bit će dodani
+            uskoro. 💄
+          </p>
+        </div>
+      </transition>
     </main>
   </div>
 </template>
@@ -159,7 +234,6 @@ const looks = [
   color: #fff;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 }
-
 .logo {
   width: 80px;
   height: 80px;
@@ -167,21 +241,18 @@ const looks = [
   border-radius: 14px;
   cursor: pointer;
 }
-
 .nav-center {
   display: flex;
   gap: 16px;
   justify-content: center;
   flex-wrap: wrap;
 }
-
 .nav-right {
   display: flex;
   gap: 14px;
   align-items: center;
   justify-content: flex-end;
 }
-
 .link {
   background: none;
   border: none;
@@ -197,7 +268,6 @@ const looks = [
 .link:hover {
   border-bottom-color: var(--brand-primary);
 }
-
 .btn {
   border: none;
   cursor: pointer;
@@ -228,11 +298,10 @@ const looks = [
 }
 
 .content {
-  margin-top: calc(var(--nav-h) + 140px);
-  padding: 350px 40px 80px;
+  margin-top: calc(var(--nav-h) + 80px);
+  padding: 100px 40px 80px;
   text-align: center;
 }
-
 .details-hero h1 {
   font-size: 2.6rem;
   background: linear-gradient(90deg, var(--brand-accent), var(--brand-primary));
@@ -240,60 +309,102 @@ const looks = [
   color: transparent;
   margin-bottom: 10px;
 }
-
 .details-hero p {
   font-size: 1.1rem;
   opacity: 0.9;
   max-width: 700px;
-  margin: 0 auto 40px;
+  margin: 0 auto 30px;
 }
 
-.details-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 22px;
-  max-width: 1100px;
-  margin: 0 auto;
+.look-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+}
+.look-tab {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+.look-tab:hover {
+  border-color: var(--brand-primary);
+  transform: translateY(-3px);
+}
+.look-tab.active {
+  background: linear-gradient(
+    135deg,
+    var(--brand-accent),
+    var(--brand-primary)
+  );
+  border-color: var(--brand-accent);
 }
 
 .detail-card {
-  background: rgba(34, 36, 40, 0.6);
-  border-radius: 20px;
-  padding: 24px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
-  transition: transform 0.2s ease, box-shadow 0.3s ease;
-}
-.detail-card:hover {
-  transform: translateY(-4px);
+  width: 100%;
+  max-width: 1150px;
+  margin: 0 auto;
+  background: rgba(34, 36, 40, 0.8);
+  border-radius: 24px;
+  padding: 10px 60px 60px;
   box-shadow: 0 25px 70px rgba(0, 0, 0, 0.55);
-  border-color: rgba(37, 150, 190, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  overflow-x: auto;
 }
-.detail-card h2 {
-  margin-bottom: 10px;
-  font-size: 1.3rem;
-  color: #fff;
-}
-.detail-card ul {
-  list-style: none;
-  padding: 0;
-}
-.detail-card li {
-  font-size: 1rem;
-  opacity: 0.9;
-  margin: 6px 0;
+.look-desc {
+  font-size: 1.1rem;
+  margin-bottom: 24px;
+  opacity: 0.95;
+  text-align: left;
 }
 
-@media (max-width: 820px) {
-  .logo {
-    width: 58px;
-    height: 58px;
-  }
-  .nav-center {
-    display: none;
-  }
-  .details-hero h1 {
-    font-size: 2rem;
-  }
+.product-gallery {
+  display: flex;
+  gap: 35px;
+  justify-content: flex-start;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding-bottom: 20px;
+}
+.product-card {
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 16px;
+  width: 340px;
+  text-align: center;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.product-card:hover {
+  transform: scale(1.06);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
+}
+.product-card img {
+  width: 100%;
+  height: 270px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+.product-card span {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.4s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 </style>

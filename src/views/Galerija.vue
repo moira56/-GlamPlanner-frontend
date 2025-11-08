@@ -28,58 +28,42 @@ function logout() {
   router.push("/login");
 }
 
-const events = [
-  {
-    id: "vjenčanje",
-    title: "Vjenčanje",
-    desc: "Elegantan i dugotrajan make-up za tvoj poseban dan.",
-    image:
-      "https://res.cloudinary.com/ditd1epqb/image/upload/v1762361809/istockphoto-1190043570-612x612_cwqvey.jpg",
-  },
-  {
-    id: "matura",
-    title: "Matura",
-    desc: "Sjaj i mladenački glam za nezaboravnu večer.",
-    image:
-      "https://res.cloudinary.com/ditd1epqb/image/upload/v1762361809/foto47599_cjyprf.jpg",
-  },
-  {
-    id: "posao",
-    title: "Poslovni sastanak",
-    desc: "Diskretan i uredan make-up koji odiše profesionalnošću.",
-    image:
-      "https://res.cloudinary.com/ditd1epqb/image/upload/v1762361809/Board-meeting-image_dwcwbu.jpg",
-  },
-  {
-    id: "rođendan",
-    title: "Proslava rođendana",
-    desc: "Veseli tonovi i blistav sjaj za slavlje do kasno u noć.",
-    image:
-      "https://res.cloudinary.com/ditd1epqb/image/upload/v1762361809/2021_09_shutterstock_1323618038-scaled_r82pzz.jpg",
-  },
-  {
-    id: "večernji-izlazak",
-    title: "Večernji izlazak",
-    desc: "Smokey eyes i ruž boje vina — klasika koja nikad ne izlazi iz mode.",
-    image:
-      "https://res.cloudinary.com/ditd1epqb/image/upload/v1762361810/premium_photo-1661315452408-ab1839e8d468_e2lxag.jpg",
-  },
-  {
-    id: "fotkanje",
-    title: "Fotografiranje",
-    desc: "Besprijekoran ten i naglašene crte lica za kameru.",
-    image:
-      "https://res.cloudinary.com/ditd1epqb/image/upload/v1762361808/2-challenges-of-photo-shooting_pb95rb.jpg",
-  },
-];
+const newImageUrl = ref("");
+const newImageDesc = ref("");
+const fullscreenImg = ref(null);
 
-function openEvent(event) {
-  router.push(`/events/${event.id}`);
+const gallery = ref([
+  {
+    url: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762368839/d5994ff8-8006-4523-ba75-d2c2f4e047e6_oecssj.png",
+    desc: "Prirodni make-up sa sjajnim usnama i nježnim rumenilom — idealan za dnevne prilike.",
+  },
+  {
+    url: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762368837/c9eb81a5-b04e-4c64-8fbd-0042f456ba08_moxhrm.png",
+    desc: "Lagani ten, maskara i nježna nijansa ruža — jednostavno i elegantno.",
+  },
+]);
+
+function addImage() {
+  if (!newImageUrl.value.trim()) return;
+  gallery.value.push({
+    url: newImageUrl.value,
+    desc: newImageDesc.value || "Bez opisa.",
+  });
+  newImageUrl.value = "";
+  newImageDesc.value = "";
+}
+
+function removeImage(index) {
+  gallery.value.splice(index, 1);
+}
+
+function toggleFullscreen(image) {
+  fullscreenImg.value = fullscreenImg.value === image ? null : image;
 }
 </script>
 
 <template>
-  <div class="events">
+  <div class="tips">
     <header class="nav">
       <div class="nav-left" @click="go('/')">
         <img
@@ -91,9 +75,9 @@ function openEvent(event) {
 
       <nav class="nav-center">
         <button class="link" @click="go('/')">Početna</button>
-        <button class="link active">Događaji</button>
+        <button class="link" @click="go('/events')">Događaji</button>
         <button class="link" @click="go('/plans')">Planovi šminkanja</button>
-        <button class="link" @click="go('/gallery')">Galerija</button>
+        <button class="link active">Galerija</button>
         <button class="link" @click="go('/tips')">Savjeti</button>
         <button class="link" @click="go('/about')">O aplikaciji</button>
       </nav>
@@ -121,26 +105,56 @@ function openEvent(event) {
     </header>
 
     <main class="content">
-      <section class="events-hero">
-        <h1>Odaberi događaj</h1>
+      <section class="gallery-hero">
+        <h1>📸 Galerija make-up lookova</h1>
         <p>
-          Svaka prigoda zaslužuje poseban make-up plan — od romantičnih
-          vjenčanja do poslovnih dana.
+          Dodaj vlastite lookove, proizvode i savjete kako bi inspirirala druge
+          korisnike.
         </p>
       </section>
 
-      <section class="events-grid">
+      <section class="add-section" v-if="isAuthed">
+        <input
+          v-model="newImageUrl"
+          type="text"
+          placeholder="Zalijepi URL slike..."
+        />
+        <textarea
+          v-model="newImageDesc"
+          placeholder="Dodaj opis, savjet ili preporuku proizvoda..."
+        ></textarea>
+        <button class="btn accent" @click="addImage">Dodaj sliku</button>
+      </section>
+
+      <section class="gallery-grid">
         <div
-          v-for="event in events"
-          :key="event.id"
-          class="event-card"
-          @click="openEvent(event)"
+          v-for="(image, index) in gallery"
+          :key="index"
+          class="gallery-item"
         >
-          <img :src="event.image" alt="" class="event-image" />
-          <h2>{{ event.title }}</h2>
-          <p>{{ event.desc }}</p>
+          <img :src="image.url" alt="" @click="toggleFullscreen(image)" />
+          <div class="overlay">
+            <button
+              v-if="isAdmin"
+              class="delete-btn"
+              @click.stop="removeImage(index)"
+            >
+              ✕
+            </button>
+          </div>
+          <p class="desc">{{ image.desc }}</p>
         </div>
       </section>
+
+      <transition name="fade">
+        <div
+          v-if="fullscreenImg"
+          class="fullscreen"
+          @click="toggleFullscreen(fullscreenImg)"
+        >
+          <img :src="fullscreenImg.url" alt="Fullscreen" />
+        </div>
+      </transition>
     </main>
   </div>
 </template>
@@ -152,9 +166,10 @@ function openEvent(event) {
   --nav-h: 90px;
 }
 
-.events {
+.tips {
   width: 100%;
   min-height: 100vh;
+  overflow-y: auto;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
     url("https://res.cloudinary.com/ditd1epqb/image/upload/v1761920929/pexels-pablo-gomez-2151419725-33614966_zhx1mo.jpg")
       center/cover no-repeat fixed;
@@ -177,7 +192,6 @@ function openEvent(event) {
   backdrop-filter: blur(10px);
   background: rgba(20, 22, 24, 0.5);
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-  color: #fff;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 }
 
@@ -249,75 +263,112 @@ function openEvent(event) {
 }
 
 .content {
-  margin-top: calc(var(--nav-h) + 40px);
-  padding: 60px 40px 80px;
+  margin-top: calc(var(--nav-h) + 140px);
+  padding: 80px 40px 80px;
   text-align: center;
 }
 
-.events-hero h1 {
+.gallery-hero h1 {
   font-size: 2.6rem;
   background: linear-gradient(90deg, var(--brand-accent), var(--brand-primary));
   -webkit-background-clip: text;
   color: transparent;
   margin-bottom: 10px;
 }
-
-.events-hero p {
+.gallery-hero p {
   font-size: 1.1rem;
   opacity: 0.9;
   max-width: 700px;
   margin: 0 auto 40px;
 }
 
-.events-grid {
+.add-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 40px;
+}
+.add-section input,
+.add-section textarea {
+  width: 80%;
+  max-width: 550px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+}
+.add-section textarea {
+  resize: none;
+  height: 80px;
+}
+.add-section .btn {
+  padding: 10px 20px;
+  font-weight: 700;
+  border-radius: 999px;
+}
+
+.gallery-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 22px;
   max-width: 1100px;
   margin: 0 auto;
 }
-
-.event-card {
+.gallery-item {
   background: rgba(34, 36, 40, 0.6);
   border-radius: 20px;
-  padding: 24px 18px;
+  padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
-  transition: transform 0.2s ease, box-shadow 0.3s ease;
+  transition: transform 0.2s ease;
+}
+.gallery-item:hover {
+  transform: scale(1.03);
+}
+.gallery-item img {
+  width: 100%;
+  height: 240px;
+  object-fit: cover;
+  border-radius: 16px;
   cursor: pointer;
 }
-.event-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.55);
-  border-color: rgba(37, 150, 190, 0.5);
+.overlay {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 6px;
 }
-.event-card img {
-  width: 100%;
-  height: 160px;
-  border-radius: 14px;
-  object-fit: cover;
-  margin-bottom: 10px;
-}
-.event-card h2 {
-  margin-bottom: 6px;
-  font-size: 1.3rem;
-  color: #fff;
-}
-.event-card p {
-  font-size: 1rem;
+.desc {
+  font-size: 0.95rem;
   opacity: 0.9;
+  margin-top: 8px;
+  text-align: left;
 }
 
-@media (max-width: 820px) {
-  .logo {
-    width: 58px;
-    height: 58px;
-  }
-  .nav-center {
-    display: none;
-  }
-  .events-hero h1 {
-    font-size: 2rem;
-  }
+.fullscreen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+}
+.fullscreen img {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: 16px;
+  cursor: zoom-out;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
 }
 </style>

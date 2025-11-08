@@ -41,7 +41,7 @@ function logout() {
       </div>
 
       <nav class="nav-center">
-        <button class="link" @click="go('/')">Početna</button>
+        <button class="link active" @click="go('/')">Početna</button>
         <button class="link" @click="go('/events')">Događaji</button>
         <button class="link" @click="go('/plans')">Planovi šminkanja</button>
         <button class="link" @click="go('/gallery')">Galerija</button>
@@ -55,18 +55,11 @@ function logout() {
             <button class="btn cta" @click="go('/events/new')">
               + Novi događaj
             </button>
-            <div class="divider" aria-hidden="true"></div>
+            <div class="divider"></div>
           </template>
 
           <button class="link" @click="go('/profile')">Profil</button>
           <button class="link" @click="logout">Odjava</button>
-        </template>
-
-        <template v-else>
-          <button class="link" @click="go('/login')">Prijava</button>
-          <button class="btn accent" @click="go('/register')">
-            Registracija
-          </button>
         </template>
       </div>
     </header>
@@ -74,22 +67,17 @@ function logout() {
     <main class="content">
       <section class="hero">
         <div class="glass">
-          <h1 class="h-title">Dobrodošli u <span>GlamPlanner</span></h1>
+          <h1 class="h-title">Dobrodošla u <span>GlamPlanner</span></h1>
           <p class="h-sub">
-            Tvoj osobni planer šminkanja — isplaniraj korake, odaberi proizvode,
-            spremi look i blistaj bez stresa.
+            Upravljaj svojim make-up planovima, pregledaj događaje, dodaj
+            lookove u galeriju i otkrij profesionalne savjete.
           </p>
           <div class="cta-row">
-            <button v-if="isAuthed" class="btn primary" @click="go('/events')">
+            <button class="btn primary" @click="go('/events')">
               Pregledaj događaje
             </button>
-
-            <button v-else class="btn primary" @click="go('/register')">
-              Registriraj se besplatno
-            </button>
-
-            <button class="btn ghost" @click="go('/about')">
-              Pogledaj kako radi
+            <button class="btn ghost" @click="go('/gallery')">
+              Otvori galeriju
             </button>
           </div>
         </div>
@@ -98,39 +86,39 @@ function logout() {
       <section class="features">
         <div class="f-grid">
           <article class="f-card" @click="go('/plans')">
-            <h3>Brzi plan</h3>
+            <h3>Planovi šminkanja</h3>
             <p>
-              Predloženi koraci šminkanja (bazni ten, oči, usne) – prilagodi ih
-              svom događaju u par klikova.
+              Kreiraj ili pregledaj personalizirane planove šminkanja za svaku
+              priliku.
             </p>
             <span class="f-link">Otvori planove →</span>
           </article>
 
           <article class="f-card" @click="go('/events')">
-            <h3>Predlošci događaja</h3>
+            <h3>Događaji</h3>
             <p>
-              Vjenčanje, matura, poslovni sastanak… svaki predložak nosi primjer
-              stila i vremensku liniju.
+              Vjenčanje, matura, posao — pronađi inspiraciju i planiraj svoj
+              look.
             </p>
             <span class="f-link">Pregled događaja →</span>
           </article>
 
           <article class="f-card" @click="go('/gallery')">
-            <h3>Galerija lookova</h3>
+            <h3>Galerija</h3>
             <p>
-              Spremi fotografije nakon šminkanja, dodaj proizvode i zabilješke
-              za savršenu reprizu.
+              Dodaj svoje fotografije i proizvode kako bi lako ponovila omiljene
+              lookove.
             </p>
-            <span class="f-link">Otvori galeriju →</span>
+            <span class="f-link">Pogledaj galeriju →</span>
           </article>
 
           <article class="f-card" @click="go('/tips')">
-            <h3>Savjeti po tipu događaja</h3>
+            <h3>Savjeti i trikovi</h3>
             <p>
-              Mat vs. dewy ten, dugotrajnost ruža, raspon nijansi – preporuke
-              prema prigodi i trajanju.
+              Nauči kako održati šminku postojanom i koje proizvode birati prema
+              tipu kože.
             </p>
-            <span class="f-link">Pročitaj savjete →</span>
+            <span class="f-link">Otvori savjete →</span>
           </article>
         </div>
       </section>
@@ -179,6 +167,7 @@ function logout() {
   height: 80px;
   object-fit: contain;
   border-radius: 14px;
+  cursor: pointer;
 }
 
 .nav-center {
@@ -204,9 +193,11 @@ function logout() {
   padding: 12px 8px;
   border-bottom: 2px solid transparent;
 }
+.link.active {
+  border-bottom: 2px solid var(--brand-accent);
+}
 .link:hover {
   border-bottom-color: var(--brand-primary);
-  filter: brightness(1.08);
 }
 
 .btn {
@@ -217,12 +208,19 @@ function logout() {
   padding: 10px 16px;
   border-radius: 999px;
 }
-.btn.accent {
+.btn.primary {
   background: linear-gradient(
     135deg,
     var(--brand-accent),
     var(--brand-primary)
   );
+}
+.btn.ghost {
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+}
+.btn:hover {
+  filter: brightness(1.05);
 }
 .btn.cta {
   background: linear-gradient(
@@ -239,12 +237,12 @@ function logout() {
 }
 
 .content {
-  padding-top: calc(var(--nav-h) + 900px);
+  padding-top: calc(var(--nav-h) + 160px);
 }
 
 .hero {
   min-height: var(--hero-h);
-  padding: 350px 18px 10px;
+  padding: 300px 18px 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -266,45 +264,31 @@ function logout() {
 }
 
 .h-title {
-  margin: 0 0 6px 0;
   font-size: clamp(26px, 3.8vw, 40px);
   font-weight: 900;
   color: #fff;
+  margin-bottom: 8px;
 }
 .h-title span {
   background: linear-gradient(90deg, var(--brand-accent), var(--brand-primary));
   -webkit-background-clip: text;
-  background-clip: text;
   color: transparent;
 }
 .h-sub {
-  margin: 0 auto 12px;
+  margin: 0 auto 16px;
   max-width: 720px;
   opacity: 0.95;
 }
+
 .cta-row {
   display: flex;
   gap: 10px;
   justify-content: center;
   flex-wrap: wrap;
 }
-.btn.primary {
-  background: linear-gradient(
-    135deg,
-    var(--brand-accent),
-    var(--brand-primary)
-  );
-}
-.btn.ghost {
-  background: transparent;
-  border: 2px solid rgba(255, 255, 255, 0.6);
-}
-.btn:hover {
-  filter: brightness(1.05);
-}
 
 .features {
-  margin-top: 20px;
+  margin-top: 40px;
   padding: 0 18px 36px;
 }
 .f-grid {
@@ -343,7 +327,6 @@ function logout() {
   font-size: 0.92rem;
   background: linear-gradient(90deg, var(--brand-accent), var(--brand-primary));
   -webkit-background-clip: text;
-  background-clip: text;
   color: transparent;
 }
 
@@ -353,9 +336,6 @@ function logout() {
   }
 }
 @media (max-width: 820px) {
-  :root {
-    --nav-h: 72px;
-  }
   .logo {
     width: 58px;
     height: 58px;
