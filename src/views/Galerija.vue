@@ -5,6 +5,8 @@ import { useRouter, useRoute } from "vue-router";
 const router = useRouter();
 const route = useRoute();
 
+const API_BASE = "http://localhost:3000/api";
+
 const token = ref(localStorage.getItem("token"));
 const role = ref(localStorage.getItem("role"));
 const isAuthed = computed(() => !!token.value);
@@ -28,31 +30,93 @@ function logout() {
   router.push("/login");
 }
 
-const gallery = ref([]);
-const newImageDesc = ref("");
-const fullscreenImg = ref(null);
-const loading = ref(false);
+const CATEGORIES = [
+  { id: "oci", label: "Oči" },
+  { id: "usne", label: "Usne" },
+  { id: "ten", label: "Ten" },
+  { id: "obrve", label: "Obrve" },
+  { id: "alat", label: "Alati" },
+  { id: "setovi", label: "Setovi" },
+];
 
-async function fetchGallery() {
+const selected = ref(new Set());
+const gallery = ref([]);
+const nextCursor = ref(null);
+const errorMsg = ref("");
+const loading = ref(false);
+const fullscreenImg = ref(null);
+
+const newImageDesc = ref("");
+const uploadTags = ref(new Set());
+const selectedFile = ref(null);
+
+const queryTags = computed(() => Array.from(selected.value).join(","));
+
+async function fetchGallery({ append = false } = {}) {
+  loading.value = true;
+  errorMsg.value = "";
   try {
-    const res = await fetch("http://localhost:3000/api/gallery");
-    if (!res.ok) throw new Error("Neuspjelo dohvaćanje galerije");
-    gallery.value = await res.json();
-  } catch (err) {
-    console.error(err);
+    const params = new URLSearchParams();
+    if (queryTags.value) params.set("tags", queryTags.value);
+    if (append && nextCursor.value) params.set("cursor", nextCursor.value);
+
+    const res = await fetch(`${API_BASE}/gallery?${params.toString()}`, {
+      headers: { Accept: "application/json" },
+    });
+    const data = await res.json();
+
+    const items = Array.isArray(data) ? data : data.items || [];
+    const cursor = Array.isArray(data) ? null : data.nextCursor || null;
+
+    if (!append) gallery.value = [];
+    gallery.value = append ? [...gallery.value, ...items] : items;
+    nextCursor.value = cursor;
+  } catch (e) {
+    errorMsg.value = e.message || "Greška pri dohvaćanju galerije";
+  } finally {
+    loading.value = false;
   }
 }
 
-async function uploadImage(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+function toggleFilterTag(id) {
+  if (selected.value.has(id)) selected.value.delete(id);
+  else selected.value.add(id);
+  fetchGallery({ append: false });
+}
 
-  const formData = new FormData();
-  formData.append("file", file);
+function clearFilters() {
+  selected.value.clear();
+  fetchGallery({ append: false });
+}
 
+function toggleUploadTag(id) {
+  if (uploadTags.value.has(id)) uploadTags.value.delete(id);
+  else uploadTags.value.add(id);
+}
+
+function onFileChange(e) {
+  const file = e.target.files?.[0] || null;
+  selectedFile.value = file;
+}
+
+function toggleFullscreen(image) {
+  fullscreenImg.value = fullscreenImg.value === image ? null : image;
+}
+
+async function publishImage() {
+  if (!selectedFile.value) {
+    alert("Odaberi sliku prije objave.");
+    return;
+  }
   loading.value = true;
+  errorMsg.value = "";
+
   try {
-    const uploadRes = await fetch("http://localhost:3000/api/upload", {
+    const formData = new FormData();
+    formData.append("file", selectedFile.value);
+    formData.append("tags", JSON.stringify(Array.from(uploadTags.value)));
+
+    const uploadRes = await fetch(`${API_BASE}/upload`, {
       method: "POST",
       body: formData,
     });
@@ -60,7 +124,7 @@ async function uploadImage(e) {
     if (!uploadRes.ok)
       throw new Error(uploadData.message || "Upload nije uspio");
 
-    const saveRes = await fetch("http://localhost:3000/api/gallery", {
+    const saveRes = await fetch(`${API_BASE}/gallery`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -68,14 +132,20 @@ async function uploadImage(e) {
       },
       body: JSON.stringify({
         url: uploadData.secure_url,
+        publicId: uploadData.public_id,
         desc: newImageDesc.value,
+        tags: Array.from(uploadTags.value),
       }),
     });
-
     if (!saveRes.ok) throw new Error("Spremanje slike nije uspjelo");
 
-    await fetchGallery();
+    await fetchGallery({ append: false });
+
     newImageDesc.value = "";
+    uploadTags.value.clear();
+    selectedFile.value = null;
+    const fileInput = document.querySelector("#fileInput");
+    if (fileInput) fileInput.value = "";
   } catch (err) {
     alert("Greška: " + err.message);
   } finally {
@@ -86,22 +156,18 @@ async function uploadImage(e) {
 async function removeImage(id) {
   if (!confirm("Sigurno želiš obrisati ovu sliku?")) return;
   try {
-    const res = await fetch(`http://localhost:3000/api/gallery/${id}`, {
+    const res = await fetch(`${API_BASE}/gallery/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token.value}` },
     });
     if (!res.ok) throw new Error("Brisanje nije uspjelo");
-    await fetchGallery();
+    await fetchGallery({ append: false });
   } catch (err) {
     alert("Greška: " + err.message);
   }
 }
 
-function toggleFullscreen(image) {
-  fullscreenImg.value = fullscreenImg.value === image ? null : image;
-}
-
-onMounted(fetchGallery);
+onMounted(() => fetchGallery());
 </script>
 
 <template>
@@ -132,11 +198,9 @@ onMounted(fetchGallery);
             </button>
             <div class="divider"></div>
           </template>
-
           <button class="link" @click="go('/profile')">Profil</button>
           <button class="link" @click="logout">Odjava</button>
         </template>
-
         <template v-else>
           <button class="link" @click="go('/login')">Prijava</button>
           <button class="btn accent" @click="go('/register')">
@@ -148,36 +212,120 @@ onMounted(fetchGallery);
 
     <main class="content">
       <section class="gallery-hero">
-        <h1>📸 Galerija make-up lookova</h1>
-        <p>
-          Dodaj vlastite lookove, proizvode i savjete kako bi inspirirala druge
-          korisnike.
-        </p>
+        <h1>📸 Galerija</h1>
+      </section>
+
+      <section class="filters">
+        <button
+          v-for="c in CATEGORIES"
+          :key="c.id"
+          class="chip"
+          :class="{ active: selected.has(c.id) }"
+          @click="toggleFilterTag(c.id)"
+        >
+          {{ c.label }}
+        </button>
+
+        <button
+          v-if="selected.size"
+          class="chip clear"
+          @click="clearFilters"
+          title="Očisti sve filtre"
+        >
+          Očisti filtre
+        </button>
       </section>
 
       <section class="add-section" v-if="isAuthed">
-        <input type="file" accept="image/*" @change="uploadImage" />
-        <textarea
-          v-model="newImageDesc"
-          placeholder="Dodaj opis, savjet ili preporuku proizvoda..."
-        ></textarea>
+        <div class="upload-grid">
+          <div class="upload-col">
+            <input
+              id="fileInput"
+              type="file"
+              accept="image/*"
+              @change="onFileChange"
+            />
+            <textarea
+              v-model="newImageDesc"
+              placeholder="Dodaj opis, savjet ili preporuku proizvoda..."
+            ></textarea>
+          </div>
+
+          <div class="upload-col">
+            <div class="subheading">Tagovi (kategorije)</div>
+            <div class="tag-pick">
+              <label v-for="c in CATEGORIES" :key="c.id" class="tag-option">
+                <input
+                  type="checkbox"
+                  :value="c.id"
+                  :checked="uploadTags.has(c.id)"
+                  @change="toggleUploadTag(c.id)"
+                />
+                <span>{{ c.label }}</span>
+              </label>
+            </div>
+
+            <div class="actions">
+              <button
+                class="btn publish"
+                :disabled="loading || !selectedFile"
+                @click="publishImage"
+                title="Objavi sliku"
+              >
+                {{ loading ? "Objavljujem..." : "Objavi" }}
+              </button>
+              <span class="file-note" v-if="!selectedFile"
+                >Odaberi sliku za objavu</span
+              >
+            </div>
+          </div>
+        </div>
+
         <div v-if="loading" class="uploading">📤 Uploadam sliku...</div>
       </section>
 
-      <section class="gallery-grid">
-        <div v-for="img in gallery" :key="img._id" class="gallery-item">
-          <img :src="img.url" alt="" @click="toggleFullscreen(img)" />
-          <div class="overlay">
-            <button
-              v-if="isAdmin"
-              class="delete-btn"
-              @click.stop="removeImage(img._id)"
-            >
-              ✕
-            </button>
-          </div>
-          <p class="desc">{{ img.desc }}</p>
+      <section class="results">
+        <div v-if="errorMsg" class="error">{{ errorMsg }}</div>
+
+        <div v-if="!loading && gallery.length === 0" class="empty">
+          Nema slika za odabrani filter.
         </div>
+
+        <div class="gallery-grid">
+          <div
+            v-for="img in gallery"
+            :key="img.id || img._id"
+            class="gallery-item"
+          >
+            <div class="thumb-wrap" @click="toggleFullscreen(img)">
+              <img :src="img.thumb || img.url" alt="" />
+            </div>
+            <div class="overlay">
+              <button
+                v-if="isAdmin"
+                class="delete-btn"
+                @click.stop="removeImage(img._id)"
+                title="Obriši"
+              >
+                ✕
+              </button>
+            </div>
+            <p class="desc">
+              <span v-if="img.desc">{{ img.desc }}</span>
+            </p>
+            <div class="tags" v-if="img.tags?.length">
+              <span v-for="t in img.tags" :key="t" class="tag">#{{ t }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="loadmore" v-if="nextCursor && !loading">
+          <button class="btn" @click="fetchGallery({ append: true })">
+            Učitaj još
+          </button>
+        </div>
+
+        <div v-if="loading" class="loading">Učitavanje…</div>
       </section>
 
       <transition name="fade">
@@ -202,25 +350,13 @@ body,
   overflow-y: auto !important;
   overflow-x: hidden !important;
 }
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
-    url("https://res.cloudinary.com/ditd1epqb/image/upload/v1761920929/pexels-pablo-gomez-2151419725-33614966_zhx1mo.jpg")
-      center/cover no-repeat;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+body {
+  -webkit-overflow-scrolling: touch;
 }
 </style>
 
@@ -254,7 +390,6 @@ html {
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 }
-
 .logo {
   width: 80px;
   height: 80px;
@@ -262,21 +397,18 @@ html {
   border-radius: 14px;
   cursor: pointer;
 }
-
 .nav-center {
   display: flex;
   gap: 16px;
   justify-content: center;
   flex-wrap: wrap;
 }
-
 .nav-right {
   display: flex;
   gap: 14px;
   align-items: center;
   justify-content: flex-end;
 }
-
 .link {
   background: none;
   border: none;
@@ -292,7 +424,6 @@ html {
 .link:hover {
   border-bottom-color: var(--brand-primary);
 }
-
 .btn {
   border: none;
   cursor: pointer;
@@ -324,79 +455,232 @@ html {
 
 .content {
   margin-top: calc(var(--nav-h) + 120px);
-  padding: 80px 40px 300px;
+  padding: 80px 40px 220px;
   text-align: center;
   flex: 1;
 }
-
 .gallery-hero h1 {
-  font-size: 2.6rem;
+  font-size: 2.2rem;
   background: linear-gradient(90deg, var(--brand-accent), var(--brand-primary));
   -webkit-background-clip: text;
   color: transparent;
   margin-bottom: 10px;
 }
-.gallery-hero p {
-  font-size: 1.1rem;
-  opacity: 0.9;
-  max-width: 700px;
-  margin: 0 auto 40px;
+
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 0 0 18px;
+}
+.chip {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 8px 18px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+.chip:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+.chip.active {
+  background: linear-gradient(
+    135deg,
+    var(--brand-accent),
+    var(--brand-primary)
+  );
+  border-color: transparent;
+}
+.chip.clear {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .add-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 40px;
+  background: rgba(34, 36, 40, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  max-width: 1100px;
+  margin: 0 auto 24px;
+  padding: 16px;
 }
-.add-section input,
-.add-section textarea {
-  width: 80%;
-  max-width: 550px;
+.upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 860px) {
+  .upload-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.upload-col textarea,
+.upload-col input[type="text"],
+.upload-col input[type="file"] {
+  width: 100%;
   padding: 10px 14px;
   border-radius: 10px;
   border: none;
   outline: none;
   font-size: 1rem;
   background: rgba(34, 36, 40, 0.6);
+  color: #fff !important;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+}
+.upload-col textarea::placeholder,
+.upload-col input[type="text"]::placeholder {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+.upload-col input[type="file"]::file-selector-button {
+  background: linear-gradient(
+    135deg,
+    var(--brand-accent),
+    var(--brand-primary)
+  );
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.subheading {
+  text-align: left;
+  opacity: 1;
+  font-weight: 700;
+  margin-top: 4px;
+  color: #fff !important;
+}
+.tag-pick {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 6px 0 10px;
+}
+.tag-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  color: #fff !important;
+}
+.tag-option input[type="checkbox"] {
+  accent-color: var(--brand-accent);
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+.btn.publish {
+  background: linear-gradient(
+    135deg,
+    var(--brand-primary),
+    var(--brand-accent)
+  );
+}
+.btn.publish:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.file-note {
+  opacity: 0.9;
+  font-size: 0.95rem;
 }
 
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 22px;
+.results {
   max-width: 1100px;
   margin: 0 auto;
 }
+.gallery-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 980px) {
+  .gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .gallery-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .gallery-item {
   background: rgba(34, 36, 40, 0.6);
-  border-radius: 20px;
-  padding: 12px;
+  border-radius: 16px;
+  padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
-  transition: transform 0.2s ease;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+  transition: transform 0.18s ease;
 }
 .gallery-item:hover {
-  transform: scale(1.03);
+  transform: translateY(-2px);
 }
-.gallery-item img {
+
+.thumb-wrap {
   width: 100%;
-  height: 240px;
-  object-fit: cover;
-  border-radius: 16px;
+  border-radius: 12px;
+  overflow: hidden;
   cursor: pointer;
+  aspect-ratio: 4 / 5;
+  background: rgba(255, 255, 255, 0.06);
 }
+.thumb-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .overlay {
   display: flex;
   justify-content: flex-end;
   padding-top: 6px;
 }
+.delete-btn {
+  background: rgba(0, 0, 0, 0.8);
+  border: none;
+  color: #fff;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-weight: 900;
+}
 .desc {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   opacity: 0.9;
   margin-top: 8px;
   text-align: left;
+  color: #fff;
+}
+.tags {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.tag {
+  font-size: 0.78rem;
+  opacity: 0.85;
+}
+
+.loadmore {
+  text-align: center;
+  margin-top: 14px;
+}
+.loading {
+  opacity: 0.9;
+  margin-top: 10px;
 }
 
 .fullscreen {
@@ -423,31 +707,5 @@ html {
 .fade-leave-to {
   opacity: 0;
   transform: scale(0.95);
-}
-
-.gallery-hero p,
-.add-section textarea,
-.add-section input,
-.desc,
-.uploading,
-.link {
-  color: #fff !important;
-}
-
-.add-section textarea::placeholder,
-.add-section input::placeholder {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.gallery-hero h1 {
-  background: linear-gradient(90deg, var(--brand-accent), var(--brand-primary));
-  -webkit-background-clip: text;
-  color: transparent;
-  text-shadow: none;
-}
-
-.gallery-hero p,
-.desc {
-  text-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
 }
 </style>
