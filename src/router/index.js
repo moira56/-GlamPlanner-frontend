@@ -3,6 +3,7 @@ import Login from "../views/Login.vue";
 import Register from "../views/Register.vue";
 import Home from "../views/Home.vue";
 import Gallery from "../views/Galerija.vue";
+import Profile from "../views/Profile.vue";
 
 const routes = [
   { path: "/", name: "home", component: Home },
@@ -33,6 +34,11 @@ const routes = [
     path: "/gallery",
     name: "gallery",
     component: Gallery,
+  },
+  {
+    path: "/profile",
+    name: "Profile",
+    component: Profile,
   },
 ];
 

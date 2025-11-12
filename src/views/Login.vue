@@ -18,14 +18,10 @@ async function login() {
       ? { email: identifier.value.trim(), password: password.value }
       : { username: identifier.value.trim(), password: password.value };
 
-    const { data } = await api.post("/login", payload);
+    const { data } = await api.post("/auth/login", payload);
 
     localStorage.setItem("token", data.token);
-    if (data.user?.role) {
-      localStorage.setItem("role", data.user.role);
-    } else {
-      localStorage.setItem("role", "user");
-    }
+    localStorage.setItem("role", data.user?.role || "user");
 
     router.push({ name: "home" });
   } catch (err) {

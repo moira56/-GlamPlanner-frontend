@@ -1,6 +1,9 @@
 <script setup>
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import api from "../api/api.js";
+
+const router = useRouter();
 
 const email = ref("");
 const username = ref("");
@@ -31,14 +34,16 @@ async function register() {
 
   loading.value = true;
   try {
-    const { data } = await api.post("/register", {
-      email: email.value,
-      username: username.value,
+    const { data } = await api.post("/auth/register", {
+      email: email.value.trim(),
+      username: username.value.trim(),
       password: password.value,
       role: role.value,
     });
 
     localStorage.setItem("token", data.token);
+    localStorage.setItem("role", data.user?.role || "user");
+
     successMsg.value = "Registracija uspješna!";
   } catch (err) {
     errorMsg.value =
