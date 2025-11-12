@@ -65,7 +65,7 @@ const events = [
       "https://res.cloudinary.com/ditd1epqb/image/upload/v1762361810/premium_photo-1661315452408-ab1839e8d468_e2lxag.jpg",
   },
   {
-    id: "fotkanje",
+    id: "fotografiranje",
     title: "Fotografiranje",
     desc: "Besprijekoran ten i naglašene crte lica za kameru.",
     image:

@@ -28,71 +28,84 @@ function logout() {
   router.push("/login");
 }
 
-const selectedLook = ref(null);
-
-const looks = [
-  {
-    id: "natural",
-    name: "Prirodni look 🌿",
-    desc: "Lagani i prirodan izgled za svježinu tijekom dana.",
-    products: [
-      {
-        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365688/rvob4mlfdt70_vvh2km.jpg",
-        name: "Rumenilo",
-      },
-      {
-        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365689/puow2hr6jttc_c7amga.jpg",
-        name: "Maskara",
-      },
-      {
-        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365685/melem-cold-cream-hranjivi-balzam-za-usne-_yyfocx.jpg",
-        name: "Balzam za usne",
-      },
-      {
-        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365685/Bionike-DEFENCE-Hydractive-SPF-15-BB-krema-40-ml_bhjyan.jpg",
-        name: "BB krema",
-      },
-    ],
-  },
-  {
-    id: "classic",
-    name: "Klasični glam ✨",
-    desc: "Elegantni i profinjeni make-up koji pristaje svakoj prigodi.",
-    products: [
-      {
-        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000003/foundation_full.jpg",
-        name: "Tečni puder s punom pokrivnošću",
-      },
-      {
-        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000004/eyeshadow.jpg",
-        name: "Zlatna sjenila",
-      },
-      {
-        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000005/highlighter.jpg",
-        name: "Highlighter",
-      },
-    ],
-  },
-  {
-    id: "bold",
-    name: "Intenzivni večernji look 💎",
-    desc: "Smokey eyes, dramatične boje i dugotrajni završni sloj.",
-    products: [
-      {
-        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000006/smokey.jpg",
-        name: "Paleta tamnih sjenila",
-      },
-      {
-        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000007/lipstick.jpg",
-        name: "Mat ruž tamne boje",
-      },
-      {
-        img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000008/fixspray.jpg",
-        name: "Fiksator šminke",
-      },
-    ],
-  },
+const supportedEvents = [
+  "fotografiranje",
+  "poslovni sastanak",
+  "fotografiranje",
+  "posao",
 ];
+
+const eventImages = {
+  fotografiranje: [
+    {
+      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365688/rvob4mlfdt70_vvh2km.jpg",
+      name: "Rumenilo",
+    },
+    {
+      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365689/puow2hr6jttc_c7amga.jpg",
+      name: "Maskara",
+    },
+    {
+      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365685/melem-cold-cream-hranjivi-balzam-za-usne-_yyfocx.jpg",
+      name: "Balzam za usne",
+    },
+    {
+      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365685/Bionike-DEFENCE-Hydractive-SPF-15-BB-krema-40-ml_bhjyan.jpg",
+      name: "BB krema",
+    },
+  ],
+  "poslovni sastanak": [
+    {
+      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000003/foundation_full.jpg",
+      name: "Tečni puder s punom pokrivnošću",
+    },
+    {
+      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000004/eyeshadow.jpg",
+      name: "Zlatna sjenila",
+    },
+    {
+      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000005/highlighter.jpg",
+      name: "Highlighter",
+    },
+  ],
+  fotografiranje: [
+    {
+      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000006/smokey.jpg",
+      name: "Paleta tamnih sjenila",
+    },
+    {
+      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000007/lipstick.jpg",
+      name: "Mat ruž tamne boje",
+    },
+    {
+      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000008/fixspray.jpg",
+      name: "Fiksator šminke",
+    },
+  ],
+  posao: [
+    {
+      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365689/puow2hr6jttc_c7amga.jpg",
+      name: "Maskara",
+    },
+    {
+      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365685/Bionike-DEFENCE-Hydractive-SPF-15-BB-krema-40-ml_bhjyan.jpg",
+      name: "BB krema",
+    },
+    {
+      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365688/rvob4mlfdt70_vvh2km.jpg",
+      name: "Rumenilo",
+    },
+  ],
+};
+
+const isSupportedEvent = computed(() =>
+  supportedEvents.includes((route.params.id || "").toLowerCase())
+);
+
+const imagesForEvent = computed(() => {
+  const key = (route.params.id || "").toLowerCase();
+  return eventImages[key] || [];
+});
 </script>
 
 <template>
@@ -138,60 +151,25 @@ const looks = [
 
     <main class="content">
       <section class="details-hero">
-        <h1>💋 Detalji događaja — {{ route.params.id.toUpperCase() }}</h1>
-        <p>
-          Ovdje možeš vidjeti preporučene stilove šminke za odabrani događaj i
-          korake za savršen izgled.
-        </p>
+        <h1>{{ route.params.id.toUpperCase() }}</h1>
       </section>
 
-      <div class="look-tabs">
-        <div
-          v-for="look in looks"
-          :key="look.id"
-          class="look-tab"
-          :class="{ active: selectedLook === look.id }"
-          @click="selectedLook = look.id"
-        >
-          {{ look.name }}
-        </div>
-      </div>
-
       <transition name="fade">
-        <div
-          v-if="
-            selectedLook &&
-            [
-              'fotografiranje',
-              'poslovni sastanak',
-              'fotkanje',
-              'posao',
-            ].includes(route.params.id.toLowerCase())
-          "
-          class="detail-card"
-        >
-          <h2>{{ looks.find((l) => l.id === selectedLook)?.name }}</h2>
-          <p class="look-desc">
-            {{ looks.find((l) => l.id === selectedLook)?.desc }}
-          </p>
+        <div v-if="isSupportedEvent" class="detail-card">
+          <h2>Preporučeni proizvodi</h2>
 
           <div class="product-gallery">
-            <div
-              v-for="p in looks.find((l) => l.id === selectedLook)?.products"
-              :key="p.name"
-              class="product-card"
-            >
+            <div v-for="p in imagesForEvent" :key="p.name" class="product-card">
               <img :src="p.img" :alt="p.name" />
               <span>{{ p.name }}</span>
             </div>
           </div>
         </div>
 
-        <div v-else-if="selectedLook" class="detail-card">
-          <h2>{{ looks.find((l) => l.id === selectedLook)?.name }}</h2>
+        <div v-else class="detail-card">
+          <h2>Slike uskoro</h2>
           <p style="opacity: 0.85">
-            Još nema preporučenih proizvoda za ovaj događaj. Bit će dodani
-            uskoro. 💄
+            Trenutno nemamo slike za ovaj događaj. Bit će dodane uskoro. 💄
           </p>
         </div>
       </transition>
@@ -302,48 +280,28 @@ const looks = [
   padding: 100px 40px 80px;
   text-align: center;
 }
+
+.details-hero {
+  margin-bottom: 60px;
+}
+
 .details-hero h1 {
-  font-size: 2.6rem;
+  font-size: 2.8rem;
   background: linear-gradient(90deg, var(--brand-accent), var(--brand-primary));
   -webkit-background-clip: text;
   color: transparent;
-  margin-bottom: 10px;
-}
-.details-hero p {
-  font-size: 1.1rem;
-  opacity: 0.9;
-  max-width: 700px;
-  margin: 0 auto 30px;
+  margin-bottom: 16px;
 }
 
-.look-tabs {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  margin-bottom: 40px;
-  flex-wrap: wrap;
-}
-.look-tab {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  padding: 12px 22px;
+.details-hero::after {
+  content: "";
+  display: block;
+  width: 160px;
+  height: 2px;
+  margin: 10px auto 0;
   border-radius: 999px;
-  cursor: pointer;
-  font-weight: 700;
-  border: 2px solid transparent;
-  transition: all 0.3s ease;
-}
-.look-tab:hover {
-  border-color: var(--brand-primary);
-  transform: translateY(-3px);
-}
-.look-tab.active {
-  background: linear-gradient(
-    135deg,
-    var(--brand-accent),
-    var(--brand-primary)
-  );
-  border-color: var(--brand-accent);
+  background: linear-gradient(90deg, var(--brand-accent), var(--brand-primary));
+  opacity: 0.6;
 }
 
 .detail-card {
@@ -352,16 +310,16 @@ const looks = [
   margin: 0 auto;
   background: rgba(34, 36, 40, 0.8);
   border-radius: 24px;
-  padding: 10px 60px 60px;
+  padding: 40px 60px 60px;
   box-shadow: 0 25px 70px rgba(0, 0, 0, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.14);
   overflow-x: auto;
 }
-.look-desc {
-  font-size: 1.1rem;
-  margin-bottom: 24px;
-  opacity: 0.95;
-  text-align: left;
+
+.detail-card h2 {
+  margin-bottom: 30px;
+  font-size: 1.8rem;
+  color: #fff;
 }
 
 .product-gallery {
@@ -372,6 +330,7 @@ const looks = [
   overflow-x: auto;
   padding-bottom: 20px;
 }
+
 .product-card {
   flex: 0 0 auto;
   background: rgba(255, 255, 255, 0.12);
