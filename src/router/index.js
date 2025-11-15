@@ -4,6 +4,7 @@ import Register from "../views/Register.vue";
 import Home from "../views/Home.vue";
 import Gallery from "../views/Galerija.vue";
 import Profile from "../views/Profile.vue";
+import Planovi from "../views/Planovi.vue";
 
 const routes = [
   { path: "/", name: "home", component: Home },
@@ -39,6 +40,11 @@ const routes = [
     path: "/profile",
     name: "Profile",
     component: Profile,
+  },
+  {
+    path: "/plans",
+    name: "plans",
+    component: Planovi,
   },
 ];
 
