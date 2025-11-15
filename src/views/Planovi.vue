@@ -236,6 +236,65 @@ async function sendReply(plan) {
   }
 }
 
+async function deleteReply(plan, reply, isUserView) {
+  const planId = getPlanId(plan);
+  const replyId = reply._id?.toString?.() || reply._id;
+  if (!planId || !replyId) return;
+
+  if (!confirm("Sigurno želiš obrisati ovaj odgovor?")) return;
+
+  errorMsg.value = "";
+  successMsg.value = "";
+
+  try {
+    const res = await fetch(`${API_BASE}/plans/${planId}/replies/${replyId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token.value}` },
+    });
+    const data = await res.json();
+    if (!res.ok)
+      throw new Error(data.message || "Brisanje odgovora nije uspjelo.");
+
+    if (isUserView) {
+      userPlans.value = userPlans.value.map((p) =>
+        getPlanId(p) === planId ? data : p
+      );
+    } else {
+      adminPlans.value = adminPlans.value.map((p) =>
+        getPlanId(p) === planId ? data : p
+      );
+    }
+  } catch (err) {
+    console.error(err);
+    errorMsg.value = err.message || "Greška pri brisanju odgovora.";
+  }
+}
+
+async function deletePlan(plan) {
+  const planId = getPlanId(plan);
+  if (!planId) return;
+
+  if (!confirm("Sigurno želiš obrisati ovaj upit i sve odgovore?")) return;
+
+  errorMsg.value = "";
+  successMsg.value = "";
+
+  try {
+    const res = await fetch(`${API_BASE}/plans/${planId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token.value}` },
+    });
+    const data = await res.json();
+    if (!res.ok)
+      throw new Error(data.message || "Brisanje upita nije uspjelo.");
+
+    adminPlans.value = adminPlans.value.filter((p) => getPlanId(p) !== planId);
+  } catch (err) {
+    console.error(err);
+    errorMsg.value = err.message || "Greška pri brisanju upita.";
+  }
+}
+
 const fullscreenImg = ref(null);
 function openImage(url) {
   fullscreenImg.value = url;
@@ -393,7 +452,9 @@ onMounted(() => {
             >
               <p class="from">
                 Admin:
-                <strong>{{ plan.adminName || "odabrani admin" }}</strong>
+                <strong>
+                  {{ plan.adminName || plan.adminUsername || "odabrani admin" }}
+                </strong>
               </p>
               <p class="msg"><strong>Tvoj upit:</strong> {{ plan.message }}</p>
               <p class="time">
@@ -430,6 +491,13 @@ onMounted(() => {
                   <p class="reply-time">
                     {{ new Date(rep.createdAt).toLocaleString("hr-HR") }}
                   </p>
+
+                  <button
+                    class="small-btn delete"
+                    @click="deleteReply(plan, rep, true)"
+                  >
+                    Obriši odgovor
+                  </button>
                 </div>
               </div>
 
@@ -460,10 +528,19 @@ onMounted(() => {
               :key="getPlanId(plan)"
               class="plan-item"
             >
-              <p class="from">
-                Od:
-                <strong>{{ plan.fromUsername || "Nepoznat korisnik" }}</strong>
-              </p>
+              <div class="plan-header-row">
+                <p class="from">
+                  Od:
+                  <strong>{{
+                    plan.fromUsername || "Nepoznat korisnik"
+                  }}</strong>
+                </p>
+
+                <button class="small-btn delete" @click="deletePlan(plan)">
+                  Obriši upit
+                </button>
+              </div>
+
               <p class="msg">{{ plan.message }}</p>
               <p class="time">
                 {{ new Date(plan.createdAt).toLocaleString("hr-HR") }}
@@ -499,6 +576,13 @@ onMounted(() => {
                   <p class="reply-time">
                     {{ new Date(rep.createdAt).toLocaleString("hr-HR") }}
                   </p>
+
+                  <button
+                    class="small-btn delete"
+                    @click="deleteReply(plan, rep, false)"
+                  >
+                    Obriši odgovor
+                  </button>
                 </div>
               </div>
 
@@ -732,11 +816,22 @@ onMounted(() => {
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
   color: #ffffff;
 }
-
 .card h2 {
   font-size: 1.4rem;
   margin-bottom: 12px;
-  color: #ffffff;
+}
+
+.small-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+.small-btn.delete {
+  background: rgba(255, 120, 120, 0.18);
+  color: #ffd0d0;
 }
 
 .note,
@@ -744,7 +839,6 @@ onMounted(() => {
   font-size: 0.95rem;
   color: #f4f4f4;
 }
-
 .admin-email,
 .time,
 .reply-time {
@@ -757,7 +851,6 @@ onMounted(() => {
   gap: 10px;
   margin-top: 12px;
 }
-
 .admin-item {
   display: flex;
   align-items: center;
@@ -810,6 +903,12 @@ textarea {
   border-radius: 16px;
   background: rgba(0, 0, 0, 0.45);
 }
+.plan-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
 .from {
   font-size: 0.95rem;
   margin-bottom: 4px;
@@ -859,7 +958,6 @@ textarea {
   flex-direction: column;
   gap: 6px;
 }
-
 .upload-label {
   font-size: 0.9rem;
   cursor: pointer;
@@ -896,7 +994,6 @@ textarea {
   border-radius: 16px;
   cursor: zoom-out;
 }
-
 .fade-enter-active,
 .fade-leave-active {
   transition: all 0.25s ease;
