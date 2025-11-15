@@ -236,6 +236,14 @@ async function sendReply(plan) {
   }
 }
 
+const fullscreenImg = ref(null);
+function openImage(url) {
+  fullscreenImg.value = url;
+}
+function closeImage() {
+  fullscreenImg.value = null;
+}
+
 onMounted(() => {
   if (!isAuthed.value) return;
   if (isAdmin.value) {
@@ -299,8 +307,8 @@ onMounted(() => {
         </p>
       </section>
 
-      <section v-if="isAuthed && !isAdmin" class="layout">
-        <div class="admins-card">
+      <section v-if="isAuthed && !isAdmin" class="layout user-layout">
+        <div class="card admins-card">
           <h2>✨ Dostupni admini</h2>
 
           <div v-if="loadingAdmins" class="note">Učitavanje admina…</div>
@@ -345,7 +353,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="message-card">
+        <div class="card message-card">
           <h2>📨 Pošalji upit</h2>
           <p class="hint">
             Opiši kakav look želiš (događaj, datum, naglasci, proizvodi…)
@@ -366,7 +374,7 @@ onMounted(() => {
           </button>
         </div>
 
-        <div class="admins-card">
+        <div class="card my-plans-card full-span">
           <h2>📬 Moji upiti i odgovori</h2>
 
           <div v-if="loadingUserPlans" class="note">
@@ -407,6 +415,7 @@ onMounted(() => {
                       :key="url"
                       :src="url"
                       alt="Slika uz odgovor"
+                      @click="openImage(url)"
                     />
                   </div>
 
@@ -414,6 +423,8 @@ onMounted(() => {
                     v-else-if="rep.imageUrl"
                     :src="rep.imageUrl"
                     alt="Slika uz odgovor"
+                    class="single-reply-img"
+                    @click="openImage(rep.imageUrl)"
                   />
 
                   <p class="reply-time">
@@ -433,8 +444,8 @@ onMounted(() => {
         </div>
       </section>
 
-      <section v-else-if="isAuthed && isAdmin" class="layout">
-        <div class="admins-card">
+      <section v-else-if="isAuthed && isAdmin" class="layout admin-layout">
+        <div class="card admins-card full-span">
           <h2>📥 Upiti korisnika</h2>
 
           <div v-if="loadingPlans" class="note">Učitavanje upita…</div>
@@ -473,6 +484,7 @@ onMounted(() => {
                       :key="url"
                       :src="url"
                       alt="Slika uz odgovor"
+                      @click="openImage(url)"
                     />
                   </div>
 
@@ -480,6 +492,8 @@ onMounted(() => {
                     v-else-if="rep.imageUrl"
                     :src="rep.imageUrl"
                     alt="Slika uz odgovor"
+                    class="single-reply-img"
+                    @click="openImage(rep.imageUrl)"
                   />
 
                   <p class="reply-time">
@@ -528,7 +542,7 @@ onMounted(() => {
       </section>
 
       <section v-else class="layout">
-        <div class="message-card">
+        <div class="card message-card full-span">
           <h2>💄 Planovi šminkanja</h2>
           <p class="hint">
             Za slanje upita ili pregled upita moraš biti prijavljena/prijavljen.
@@ -536,6 +550,12 @@ onMounted(() => {
           <button class="btn accent" @click="go('/login')">Prijava</button>
         </div>
       </section>
+
+      <transition name="fade">
+        <div v-if="fullscreenImg" class="fullscreen" @click="closeImage">
+          <img :src="fullscreenImg" alt="Povećana slika" />
+        </div>
+      </transition>
     </main>
   </div>
 </template>
@@ -548,11 +568,14 @@ onMounted(() => {
 }
 
 .page-wrapper {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.6)),
+    url("https://res.cloudinary.com/ditd1epqb/image/upload/v1761920929/pexels-pablo-gomez-2151419725-33614966_zhx1mo.jpg")
+      center/cover no-repeat fixed;
+  color: #fff;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  color: #fff;
-  background: radial-gradient(circle at top, #1b1e26, #050608);
+  overflow-x: hidden;
 }
 
 .nav {
@@ -568,7 +591,7 @@ onMounted(() => {
   gap: 18px;
   padding: 0 24px;
   backdrop-filter: blur(10px);
-  background: rgba(20, 22, 24, 0.6);
+  background: rgba(20, 22, 24, 0.55);
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 }
@@ -654,53 +677,78 @@ onMounted(() => {
 }
 
 .content {
-  margin-top: calc(var(--nav-h) + 110px);
-  padding: 40px 24px 120px;
+  margin-top: calc(var(--nav-h) + 160px);
+  padding: 80px 24px 160px;
+  flex: 1;
 }
 
 .hero {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 36px;
 }
 .hero h1 {
-  font-size: 2.4rem;
+  font-size: 2.6rem;
   background: linear-gradient(90deg, var(--brand-accent), var(--brand-primary));
   -webkit-background-clip: text;
   color: transparent;
 }
 .hero p {
-  max-width: 700px;
-  margin: 10px auto 0;
-  opacity: 0.9;
+  max-width: 720px;
+  margin: 14px auto 0;
+  color: #ffffff;
 }
 
 .layout {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(260px, 1fr);
-  gap: 24px;
+  gap: 22px;
 }
 
-.admins-card,
-.message-card {
-  background: rgba(34, 36, 40, 0.8);
+.user-layout {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr);
+}
+
+.admin-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 900px) {
+  .user-layout,
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.full-span {
+  grid-column: 1 / -1;
+}
+
+.card {
+  background: rgba(24, 26, 30, 0.82);
   border-radius: 22px;
   padding: 20px 22px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  color: #ffffff;
 }
 
-.admins-card h2,
-.message-card h2 {
+.card h2 {
   font-size: 1.4rem;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  color: #ffffff;
 }
 
 .note,
 .hint {
-  opacity: 0.9;
   font-size: 0.95rem;
+  color: #f4f4f4;
+}
+
+.admin-email,
+.time,
+.reply-time {
+  color: #e0e0e0;
 }
 
 .admin-list {
@@ -739,10 +787,6 @@ onMounted(() => {
 .admin-name {
   font-weight: 700;
 }
-.admin-email {
-  font-size: 0.86rem;
-  opacity: 0.85;
-}
 
 textarea {
   width: 100%;
@@ -751,7 +795,7 @@ textarea {
   outline: none;
   padding: 10px 12px;
   resize: vertical;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.4);
   color: #fff;
 }
 
@@ -764,7 +808,7 @@ textarea {
 .plan-item {
   padding: 12px 14px;
   border-radius: 16px;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.45);
 }
 .from {
   font-size: 0.95rem;
@@ -775,7 +819,6 @@ textarea {
 }
 .time {
   font-size: 0.8rem;
-  opacity: 0.8;
 }
 
 .replies {
@@ -799,13 +842,14 @@ textarea {
   gap: 6px;
   margin-top: 4px;
 }
-.reply-images img {
+.reply-images img,
+.single-reply-img {
   max-width: 90px;
   border-radius: 8px;
+  cursor: zoom-in;
 }
 .reply-time {
   font-size: 0.75rem;
-  opacity: 0.8;
   margin-top: 2px;
 }
 
@@ -819,7 +863,7 @@ textarea {
 .upload-label {
   font-size: 0.9rem;
   cursor: pointer;
-  opacity: 0.9;
+  color: #f4f4f4;
 }
 .upload-label input {
   display: block;
@@ -835,5 +879,31 @@ textarea {
   margin-top: 10px;
   color: #b2ffb2;
   font-weight: 700;
+}
+
+.fullscreen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 250;
+}
+.fullscreen img {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: 16px;
+  cursor: zoom-out;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.25s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: scale(0.97);
 }
 </style>
