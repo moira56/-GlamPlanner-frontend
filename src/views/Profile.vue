@@ -199,7 +199,6 @@ onMounted(fetchMe);
             <input type="file" accept="image/*" @change="onAvatarChange" />
             Promijeni sliku
           </label>
-          <p class="help">Preporuka: kvadratna slika (npr. 512×512).</p>
         </div>
 
         <div class="right">
@@ -221,12 +220,6 @@ onMounted(fetchMe);
                 placeholder="Unesi prezime"
               />
             </div>
-          </div>
-
-          <div class="actions">
-            <button class="btn save" :disabled="saving" @click="saveProfile">
-              {{ saving ? "Spremam..." : "Spremi promjene" }}
-            </button>
           </div>
 
           <div v-if="loading" class="note">Učitavanje profila…</div>
@@ -351,7 +344,7 @@ body {
 
 .content {
   margin-top: calc(var(--nav-h) + 110px);
-  padding: 30px 24px 180px;
+  padding: 350px 24px 180px;
   text-align: center;
 }
 .hero h1 {
@@ -448,8 +441,10 @@ body {
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  column-gap: 32px;
+  row-gap: 16px;
 }
+
 @media (max-width: 600px) {
   .grid {
     grid-template-columns: 1fr;
