@@ -1,8 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-
-const API_BASE = "http://localhost:3000/api";
+import api from "../api/api.js";
 
 const router = useRouter();
 const route = useRoute();
@@ -33,6 +32,7 @@ function logout() {
 const loading = ref(false);
 const saving = ref(false);
 const errorMsg = ref("");
+const successMsg = ref("");
 
 const username = ref("");
 const firstName = ref("");
@@ -45,20 +45,18 @@ async function fetchMe() {
   if (!isAuthed.value) return;
   loading.value = true;
   errorMsg.value = "";
+  successMsg.value = "";
+
   try {
-    const res = await fetch(`${API_BASE}/auth/me`, {
-      headers: { Authorization: `Bearer ${token.value}` },
-    });
-    const data = await res.json();
-    if (!res.ok)
-      throw new Error(data.message || "Neuspjelo dohvaćanje profila.");
+    const { data } = await api.get("/auth/me");
 
     username.value = data.username || "";
     firstName.value = data.firstName || "";
     lastName.value = data.lastName || "";
     avatarUrl.value = data.avatarUrl || "";
   } catch (e) {
-    errorMsg.value = e.message || "Greška pri dohvaćanju profila.";
+    errorMsg.value =
+      e?.response?.data?.message || "Greška pri dohvaćanju profila.";
   } finally {
     loading.value = false;
   }
@@ -85,6 +83,7 @@ async function saveProfile() {
 
   saving.value = true;
   errorMsg.value = "";
+  successMsg.value = "";
 
   try {
     let finalAvatarUrl = avatarUrl.value;
@@ -93,42 +92,36 @@ async function saveProfile() {
       const fd = new FormData();
       fd.append("file", newAvatarFile.value);
 
-      const upRes = await fetch(`${API_BASE}/upload`, {
-        method: "POST",
-        body: fd,
+      const { data: upData } = await api.post("/upload", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-      const upData = await upRes.json();
-      if (!upRes.ok)
-        throw new Error(upData.message || "Neuspješan upload slike.");
+
       finalAvatarUrl = upData.secure_url;
     }
 
-    const patchRes = await fetch(`${API_BASE}/auth/me`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token.value}`,
-      },
-      body: JSON.stringify({
-        firstName: firstName.value || "",
-        lastName: lastName.value || "",
-        avatarUrl: finalAvatarUrl || "",
-      }),
-    });
-    const patchData = await patchRes.json();
-    if (!patchRes.ok)
-      throw new Error(patchData.message || "Neuspjela izmjena profila.");
+    const payload = {
+      firstName: firstName.value || "",
+      lastName: lastName.value || "",
+    };
+    if (finalAvatarUrl) {
+      payload.avatarUrl = finalAvatarUrl;
+    }
 
-    avatarUrl.value = patchData.avatarUrl || finalAvatarUrl;
+    const { data: patchData } = await api.patch("/auth/me", payload);
+
+    avatarUrl.value = patchData.avatarUrl || finalAvatarUrl || "";
     firstName.value = patchData.firstName ?? firstName.value;
     lastName.value = patchData.lastName ?? lastName.value;
 
     newAvatarFile.value = null;
     newAvatarPreview.value = "";
 
-    alert("Profil je ažuriran");
+    successMsg.value = "Profil je ažuriran ✔️";
   } catch (e) {
-    errorMsg.value = e.message || "Greška pri spremanju profila.";
+    errorMsg.value =
+      e?.response?.data?.message ||
+      e?.response?.data?.errors?.[0]?.msg ||
+      "Greška pri spremanju profila.";
   } finally {
     saving.value = false;
   }
@@ -222,7 +215,14 @@ onMounted(fetchMe);
             </div>
           </div>
 
+          <div class="actions">
+            <button class="btn save" :disabled="saving" @click="saveProfile">
+              {{ saving ? "Spremam…" : "Spremi promjene" }}
+            </button>
+          </div>
+
           <div v-if="loading" class="note">Učitavanje profila…</div>
+          <div v-if="successMsg" class="success">{{ successMsg }}</div>
           <div v-if="errorMsg" class="error">{{ errorMsg }}</div>
         </div>
       </section>
@@ -424,10 +424,6 @@ body {
 .upload-btn input {
   display: none;
 }
-.help {
-  opacity: 0.9;
-  font-size: 0.95rem;
-}
 
 .right {
   text-align: left;
@@ -466,7 +462,7 @@ input[type="text"] {
 }
 
 .actions {
-  margin-top: 10px;
+  margin-top: 14px;
 }
 .btn.save {
   background: linear-gradient(
@@ -487,6 +483,11 @@ input[type="text"] {
 .error {
   margin-top: 10px;
   color: #ff9d9d;
+  font-weight: 700;
+}
+.success {
+  margin-top: 10px;
+  color: #b2ffb2;
   font-weight: 700;
 }
 </style>

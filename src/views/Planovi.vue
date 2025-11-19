@@ -30,6 +30,14 @@ function logout() {
   router.push("/login");
 }
 
+function toIdString(raw) {
+  if (!raw) return "";
+  if (typeof raw === "string") return raw;
+  if (typeof raw === "object" && raw.$oid) return raw.$oid;
+  if (typeof raw.toString === "function") return raw.toString();
+  return String(raw);
+}
+
 const admins = ref([]);
 const loadingAdmins = ref(false);
 const selectedAdminId = ref("");
@@ -134,12 +142,36 @@ async function sendPlanRequest() {
   }
 }
 
+function findAdminById(anyId) {
+  const id = toIdString(anyId);
+  return admins.value.find((a) => toIdString(a._id || a.id) === id);
+}
+function getAdminName(plan) {
+  const admin = findAdminById(plan.adminId);
+  if (admin) {
+    const full = (admin.firstName || "") + " " + (admin.lastName || "");
+    return full.trim() || admin.username || "admin";
+  }
+  return plan.adminName || plan.adminUsername || "odabrani admin";
+}
+function getAdminAvatar(plan) {
+  const admin = findAdminById(plan.adminId);
+  return admin?.avatarUrl || "";
+}
+function getReplyAdminAvatar(rep) {
+  const admin = findAdminById(rep.adminId);
+  return admin?.avatarUrl || "";
+}
+
 const adminPlans = ref([]);
 const loadingPlans = ref(false);
 
 const replyText = ref({});
 const replyFiles = ref({});
 const sendingReply = ref({});
+
+const allUsers = ref([]);
+const loadingUsers = ref(false);
 
 function getPlanId(plan) {
   return plan._id?.toString() || plan.id;
@@ -166,6 +198,41 @@ async function fetchAdminPlans() {
   } finally {
     loadingPlans.value = false;
   }
+}
+
+async function fetchAllUsersForAdmin() {
+  if (!isAuthed.value || !isAdmin.value) return;
+  loadingUsers.value = true;
+  try {
+    const res = await fetch(`${API_BASE}/auth/admin/users`, {
+      headers: { Authorization: `Bearer ${token.value}` },
+    });
+    const data = await res.json();
+    if (!res.ok)
+      throw new Error(data.message || "Neuspjelo dohvaćanje korisnika.");
+    allUsers.value = data.users || data;
+  } catch (err) {
+    console.error(err);
+  } finally {
+    loadingUsers.value = false;
+  }
+}
+
+function findUserById(anyId) {
+  const id = toIdString(anyId);
+  return allUsers.value.find((u) => toIdString(u._id || u.id) === id);
+}
+function getUserName(plan) {
+  const u = findUserById(plan.userId);
+  if (u) {
+    const full = (u.firstName || "") + " " + (u.lastName || "");
+    return full.trim() || u.username || plan.fromUsername || "korisnik";
+  }
+  return plan.fromUsername || "korisnik";
+}
+function getUserAvatar(plan) {
+  const u = findUserById(plan.userId);
+  return u?.avatarUrl || "";
 }
 
 function onReplyFileChange(planId, e) {
@@ -307,6 +374,7 @@ onMounted(() => {
   if (!isAuthed.value) return;
   if (isAdmin.value) {
     fetchAdminPlans();
+    fetchAllUsersForAdmin();
   } else {
     fetchAdmins();
     fetchUserPlans();
@@ -390,7 +458,12 @@ onMounted(() => {
               />
               <div class="admin-info">
                 <div class="avatar">
-                  <span>
+                  <img
+                    v-if="admin.avatarUrl"
+                    :src="admin.avatarUrl"
+                    alt="Avatar admina"
+                  />
+                  <span v-else>
                     {{
                       (admin.firstName ||
                         admin.username ||
@@ -450,12 +523,23 @@ onMounted(() => {
               :key="getPlanId(plan)"
               class="plan-item"
             >
-              <p class="from">
-                Admin:
-                <strong>
-                  {{ plan.adminName || plan.adminUsername || "odabrani admin" }}
-                </strong>
-              </p>
+              <div class="from-row">
+                <div class="mini-avatar-wrap">
+                  <img
+                    v-if="getAdminAvatar(plan)"
+                    :src="getAdminAvatar(plan)"
+                    alt="Avatar admina"
+                  />
+                  <span v-else>
+                    {{ getAdminName(plan)[0]?.toUpperCase() || "A" }}
+                  </span>
+                </div>
+                <div>
+                  <span class="from-label">Admin:</span>
+                  <strong class="from-name">{{ getAdminName(plan) }}</strong>
+                </div>
+              </div>
+
               <p class="msg"><strong>Tvoj upit:</strong> {{ plan.message }}</p>
               <p class="time">
                 {{ new Date(plan.createdAt).toLocaleString("hr-HR") }}
@@ -468,7 +552,19 @@ onMounted(() => {
                   :key="rep._id"
                   class="reply-item"
                 >
-                  <p class="reply-text">{{ rep.message }}</p>
+                  <div class="reply-header">
+                    <div class="mini-avatar-wrap">
+                      <img
+                        v-if="getReplyAdminAvatar(rep)"
+                        :src="getReplyAdminAvatar(rep)"
+                        alt="Avatar admina"
+                      />
+                      <span v-else>
+                        {{ (rep.adminUsername || "A")[0].toUpperCase() }}
+                      </span>
+                    </div>
+                    <p class="reply-text">{{ rep.message }}</p>
+                  </div>
 
                   <div v-if="rep.imageUrls?.length" class="reply-images">
                     <img
@@ -513,38 +609,52 @@ onMounted(() => {
       </section>
 
       <section v-else-if="isAuthed && isAdmin" class="layout admin-layout">
-        <div class="card admins-card full-span">
+        <div class="card admins-card full-span admin-card-wide">
           <h2>📥 Upiti korisnika</h2>
 
-          <div v-if="loadingPlans" class="note">Učitavanje upita…</div>
+          <div v-if="loadingPlans || loadingUsers" class="note">
+            Učitavanje upita i profila…
+          </div>
 
           <div v-else-if="!adminPlans.length" class="note">
             Još nema upita od korisnika.
           </div>
 
-          <div v-else class="plan-list">
+          <div v-else class="plan-list admin-plan-list">
             <div
               v-for="plan in adminPlans"
               :key="getPlanId(plan)"
-              class="plan-item"
+              class="plan-item admin-plan-item"
             >
               <div class="plan-header-row">
-                <p class="from">
-                  Od:
-                  <strong>{{
-                    plan.fromUsername || "Nepoznat korisnik"
-                  }}</strong>
-                </p>
+                <div class="user-header">
+                  <div class="mini-avatar-wrap big">
+                    <img
+                      v-if="getUserAvatar(plan)"
+                      :src="getUserAvatar(plan)"
+                      alt="Avatar korisnika"
+                    />
+                    <span v-else>
+                      {{ getUserName(plan)[0]?.toUpperCase() || "K" }}
+                    </span>
+                  </div>
+                  <div>
+                    <p class="from">
+                      Od:
+                      <strong>{{ getUserName(plan) }}</strong>
+                    </p>
+                    <p class="time">
+                      {{ new Date(plan.createdAt).toLocaleString("hr-HR") }}
+                    </p>
+                  </div>
+                </div>
 
                 <button class="small-btn delete" @click="deletePlan(plan)">
                   Obriši upit
                 </button>
               </div>
 
-              <p class="msg">{{ plan.message }}</p>
-              <p class="time">
-                {{ new Date(plan.createdAt).toLocaleString("hr-HR") }}
-              </p>
+              <p class="msg admin-msg">{{ plan.message }}</p>
 
               <div v-if="plan.replies?.length" class="replies">
                 <p class="replies-title">Tvoji odgovori:</p>
@@ -588,9 +698,7 @@ onMounted(() => {
 
               <div class="reply-form">
                 <textarea
-                  :placeholder="
-                    'Odgovor za ' + (plan.fromUsername || 'korisnika')
-                  "
+                  :placeholder="`Odgovor za ${getUserName(plan)}`"
                   v-model="replyText[getPlanId(plan)]"
                   rows="3"
                 ></textarea>
@@ -821,6 +929,10 @@ onMounted(() => {
   margin-bottom: 12px;
 }
 
+.admin-card-wide {
+  padding: 26px 32px;
+}
+
 .small-btn {
   border: none;
   border-radius: 999px;
@@ -876,6 +988,12 @@ onMounted(() => {
   display: grid;
   place-items: center;
   font-weight: 800;
+  overflow: hidden;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .admin-name {
   font-weight: 700;
@@ -899,16 +1017,38 @@ textarea {
   margin-top: 12px;
 }
 .plan-item {
-  padding: 12px 14px;
+  padding: 16px 18px;
   border-radius: 16px;
   background: rgba(0, 0, 0, 0.45);
+}
+.admin-plan-list .admin-plan-item {
+  padding: 22px 26px;
 }
 .plan-header-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
+}
+.user-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.from-row {
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
+.from-label {
+  opacity: 0.9;
+  margin-right: 4px;
+}
+.from-name {
+  font-weight: 700;
+}
+
 .from {
   font-size: 0.95rem;
   margin-bottom: 4px;
@@ -916,8 +1056,32 @@ textarea {
 .msg {
   margin: 4px 0;
 }
+.admin-msg {
+  margin-top: 10px;
+}
 .time {
   font-size: 0.8rem;
+}
+
+.mini-avatar-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  overflow: hidden;
+}
+.mini-avatar-wrap.big {
+  width: 46px;
+  height: 46px;
+}
+.mini-avatar-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .replies {
@@ -931,6 +1095,11 @@ textarea {
 }
 .reply-item {
   padding: 6px 0;
+}
+.reply-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
 }
 .reply-text {
   font-size: 0.95rem;
@@ -953,7 +1122,7 @@ textarea {
 }
 
 .reply-form {
-  margin-top: 10px;
+  margin-top: 14px;
   display: flex;
   flex-direction: column;
   gap: 6px;
