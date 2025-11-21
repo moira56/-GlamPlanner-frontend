@@ -169,6 +169,7 @@ const loadingPlans = ref(false);
 const replyText = ref({});
 const replyFiles = ref({});
 const sendingReply = ref({});
+const replyPreviews = ref({});
 
 const allUsers = ref([]);
 const loadingUsers = ref(false);
@@ -238,6 +239,29 @@ function getUserAvatar(plan) {
 function onReplyFileChange(planId, e) {
   const files = Array.from(e.target.files || []);
   replyFiles.value = { ...replyFiles.value, [planId]: files };
+
+  if (!files.length) {
+    replyPreviews.value = { ...replyPreviews.value, [planId]: [] };
+    return;
+  }
+
+  const previewPromises = files.map((file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => resolve(event.target.result);
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
+    });
+  });
+
+  Promise.all(previewPromises)
+    .then((previews) => {
+      replyPreviews.value = { ...replyPreviews.value, [planId]: previews };
+    })
+    .catch((err) => {
+      console.error("Greška pri generiranju pregleda slike:", err);
+      errorMsg.value = "Nije moguće prikazati odabranu datoteku.";
+    });
 }
 
 async function sendReply(plan) {
@@ -245,8 +269,10 @@ async function sendReply(plan) {
   if (!planId) return;
 
   const text = replyText.value[planId]?.trim() || "";
-  if (!text) {
-    errorMsg.value = "Upiši poruku za korisnika.";
+  const files = replyFiles.value[planId] || [];
+
+  if (!text && !files.length) {
+    errorMsg.value = "Upišite poruku ili dodajte sliku.";
     return;
   }
 
@@ -255,7 +281,6 @@ async function sendReply(plan) {
   successMsg.value = "";
 
   try {
-    const files = replyFiles.value[planId] || [];
     const imageUrls = [];
 
     for (const file of files) {
@@ -265,6 +290,7 @@ async function sendReply(plan) {
       const uploadRes = await fetch(`${API_BASE}/upload`, {
         method: "POST",
         body: fd,
+        headers: { Authorization: `Bearer ${token.value}` },
       });
       const uploadData = await uploadRes.json();
       if (!uploadRes.ok)
@@ -294,6 +320,7 @@ async function sendReply(plan) {
 
     replyText.value = { ...replyText.value, [planId]: "" };
     replyFiles.value = { ...replyFiles.value, [planId]: [] };
+    replyPreviews.value = { ...replyPreviews.value, [planId]: [] };
     successMsg.value = "Odgovor je poslan korisniku. 💌";
   } catch (err) {
     console.error(err);
@@ -413,7 +440,7 @@ onMounted(() => {
           <button class="link" @click="go('/profile')">Profil</button>
           <button class="link" @click="logout">Odjava</button>
         </template>
-        <template v-else>
+        <template velse>
           <button class="link" @click="go('/login')">Prijava</button>
           <button class="btn accent" @click="go('/register')">
             Registracija
@@ -698,32 +725,51 @@ onMounted(() => {
 
               <div class="reply-form">
                 <textarea
-                  :placeholder="`Odgovor za ${getUserName(plan)}`"
+                  :placeholder="`Odgovor za ${getUserName(plan)}...`"
                   v-model="replyText[getPlanId(plan)]"
-                  rows="3"
+                  rows="6"
                 ></textarea>
 
-                <label class="upload-label">
-                  Dodaj slike (opcionalno, može više)
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    @change="onReplyFileChange(getPlanId(plan), $event)"
-                  />
-                </label>
+                <div class="upload-area">
+                  <label class="upload-label">
+                    Dodaj slike (opcionalno)
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      @change="onReplyFileChange(getPlanId(plan), $event)"
+                    />
+                  </label>
 
-                <button
-                  class="btn send"
-                  :disabled="sendingReply[getPlanId(plan)]"
-                  @click="sendReply(plan)"
-                >
-                  {{
-                    sendingReply[getPlanId(plan)]
-                      ? "Šaljem..."
-                      : "Pošalji odgovor"
-                  }}
-                </button>
+                  <div
+                    v-if="replyPreviews[getPlanId(plan)]?.length"
+                    class="image-previews"
+                  >
+                    <img
+                      v-for="(previewUrl, index) in replyPreviews[
+                        getPlanId(plan)
+                      ]"
+                      :key="index"
+                      :src="previewUrl"
+                      alt="Pregled slike"
+                      title="Pregled odabrane slike"
+                    />
+                  </div>
+                </div>
+
+                <div class="button-container">
+                  <button
+                    class="btn send"
+                    :disabled="sendingReply[getPlanId(plan)]"
+                    @click="sendReply(plan)"
+                  >
+                    {{
+                      sendingReply[getPlanId(plan)]
+                        ? "Šaljem..."
+                        : "Pošalji odgovor"
+                    }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -757,17 +803,6 @@ onMounted(() => {
   --brand-primary: #2596be;
   --brand-accent: #a65077;
   --nav-h: 90px;
-}
-
-.page-wrapper {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.6)),
-    url("https://res.cloudinary.com/ditd1epqb/image/upload/v1761920929/pexels-pablo-gomez-2151419725-33614966_zhx1mo.jpg")
-      center/cover no-repeat fixed;
-  color: #fff;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
 }
 
 .nav {
@@ -849,12 +884,13 @@ onMounted(() => {
   );
 }
 .btn.send {
-  margin-top: 8px;
   background: linear-gradient(
     135deg,
     var(--brand-primary),
     var(--brand-accent)
   );
+  padding: 12px 24px;
+  font-size: 1rem;
 }
 .btn:disabled {
   opacity: 0.6;
@@ -870,31 +906,30 @@ onMounted(() => {
 
 .content {
   margin-top: calc(var(--nav-h) + 160px);
-  padding: 80px 24px 160px;
+  padding: 80px 24px 260px;
   flex: 1;
 }
 
 .hero {
   text-align: center;
-  margin-bottom: 36px;
+  margin-bottom: 48px;
 }
 .hero h1 {
-  font-size: 2.6rem;
+  font-size: 2.8rem;
   background: linear-gradient(90deg, var(--brand-accent), var(--brand-primary));
   -webkit-background-clip: text;
   color: transparent;
 }
 .hero p {
-  max-width: 720px;
-  margin: 14px auto 0;
+  max-width: 800px;
+  margin: 16px auto 0;
   color: #ffffff;
+  font-size: 1.1rem;
 }
 
 .layout {
-  max-width: 1200px;
-  margin: 0 auto;
   display: grid;
-  gap: 22px;
+  gap: 32px;
 }
 
 .user-layout {
@@ -917,27 +952,30 @@ onMounted(() => {
 }
 
 .card {
-  background: rgba(24, 26, 30, 0.82);
-  border-radius: 22px;
-  padding: 20px 22px;
+  background: rgba(24, 26, 30, 0.85);
+  border-radius: 24px;
+  padding: 24px 28px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
   color: #ffffff;
 }
 .card h2 {
-  font-size: 1.4rem;
-  margin-bottom: 12px;
+  font-size: 1.5rem;
+  margin-bottom: 16px;
 }
 
 .admin-card-wide {
-  padding: 26px 32px;
+  padding: 32px 40px;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .small-btn {
   border: none;
   border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 0.8rem;
+  padding: 6px 14px;
+  font-size: 0.85rem;
   cursor: pointer;
   font-weight: 700;
 }
@@ -948,7 +986,7 @@ onMounted(() => {
 
 .note,
 .hint {
-  font-size: 0.95rem;
+  font-size: 1rem;
   color: #f4f4f4;
 }
 .admin-email,
@@ -960,29 +998,29 @@ onMounted(() => {
 .admin-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 12px;
+  margin-top: 16px;
 }
 .admin-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
   background: rgba(0, 0, 0, 0.35);
   cursor: pointer;
 }
 .admin-item input {
-  margin-right: 4px;
+  margin-right: 6px;
 }
 .admin-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.15);
   display: grid;
@@ -1001,45 +1039,49 @@ onMounted(() => {
 
 textarea {
   width: 100%;
-  border-radius: 14px;
-  border: none;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   outline: none;
-  padding: 10px 12px;
+  padding: 14px 16px;
   resize: vertical;
   background: rgba(0, 0, 0, 0.4);
   color: #fff;
+  font-size: 1rem;
 }
 
 .plan-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 12px;
+  gap: 20px;
+  margin-top: 16px;
 }
 .plan-item {
-  padding: 16px 18px;
-  border-radius: 16px;
+  padding: 20px 24px;
+  border-radius: 20px;
   background: rgba(0, 0, 0, 0.45);
 }
+.admin-plan-list {
+  gap: 32px;
+}
 .admin-plan-list .admin-plan-item {
-  padding: 22px 26px;
+  padding: 40px 48px;
 }
 .plan-header-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
 }
 .user-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .from-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 .from-label {
   opacity: 0.9;
@@ -1050,33 +1092,35 @@ textarea {
 }
 
 .from {
-  font-size: 0.95rem;
+  font-size: 1rem;
   margin-bottom: 4px;
 }
 .msg {
-  margin: 4px 0;
+  margin: 8px 0;
 }
 .admin-msg {
-  margin-top: 10px;
+  margin-top: 20px;
+  font-size: 1.05rem;
+  line-height: 1.6;
 }
 .time {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 }
 
 .mini-avatar-wrap {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.15);
   display: grid;
   place-items: center;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 800;
   overflow: hidden;
 }
 .mini-avatar-wrap.big {
-  width: 46px;
-  height: 46px;
+  width: 50px;
+  height: 50px;
 }
 .mini-avatar-wrap img {
   width: 100%;
@@ -1085,65 +1129,89 @@ textarea {
 }
 
 .replies {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 .replies-title {
-  font-size: 0.9rem;
-  margin-bottom: 6px;
+  font-size: 1rem;
+  margin-bottom: 8px;
 }
 .reply-item {
-  padding: 6px 0;
+  padding: 8px 0;
 }
 .reply-header {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 10px;
 }
 .reply-text {
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 .reply-images {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
+  gap: 8px;
+  margin-top: 6px;
 }
 .reply-images img,
 .single-reply-img {
-  max-width: 90px;
-  border-radius: 8px;
+  max-width: 100px;
+  border-radius: 10px;
   cursor: zoom-in;
 }
 .reply-time {
-  font-size: 0.75rem;
-  margin-top: 2px;
+  font-size: 0.8rem;
+  margin-top: 4px;
 }
 
 .reply-form {
-  margin-top: 14px;
+  margin-top: 28px;
+  padding-top: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 24px;
+}
+.upload-area {
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.3);
 }
 .upload-label {
-  font-size: 0.9rem;
+  font-size: 1rem;
   cursor: pointer;
   color: #f4f4f4;
 }
 .upload-label input {
   display: block;
-  margin-top: 4px;
+  margin-top: 10px;
+}
+.button-container {
+  display: flex;
+  justify-content: flex-end;
+}
+.image-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+.image-previews img {
+  height: 90px;
+  width: 90px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .error {
-  margin-top: 10px;
+  margin-top: 12px;
   color: #ff9d9d;
   font-weight: 700;
 }
 .success {
-  margin-top: 10px;
+  margin-top: 12px;
   color: #b2ffb2;
   font-weight: 700;
 }
