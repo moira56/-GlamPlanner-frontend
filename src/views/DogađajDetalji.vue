@@ -1,21 +1,40 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import api from "../api/api.js";
 
 const router = useRouter();
 const route = useRoute();
+const eventId = computed(() => route.params.id);
 
 const token = ref(localStorage.getItem("token"));
 const role = ref(localStorage.getItem("role"));
 const isAuthed = computed(() => !!token.value);
 const isAdmin = computed(() => role.value === "admin");
 
+const event = ref(null);
+const loading = ref(true);
+const errorMsg = ref("");
+
+const fullscreenImg = ref(null);
+
+async function fetchEventDetails() {
+  loading.value = true;
+  try {
+    const { data } = await api.get(`/events/${eventId.value}`);
+    event.value = data;
+  } catch (err) {
+    errorMsg.value = "Događaj nije pronađen.";
+    console.error(err);
+  } finally {
+    loading.value = false;
+  }
+}
+
 function handleStorage(e) {
   if (e.key === "token") token.value = e.newValue;
   if (e.key === "role") role.value = e.newValue;
 }
-onMounted(() => window.addEventListener("storage", handleStorage));
-onUnmounted(() => window.removeEventListener("storage", handleStorage));
 
 function go(path) {
   if (route.path !== path) router.push(path);
@@ -28,83 +47,37 @@ function logout() {
   router.push("/login");
 }
 
-const supportedEvents = [
-  "fotografiranje",
-  "poslovni sastanak",
-  "fotografiranje",
-  "posao",
-];
+async function deleteEvent() {
+  if (
+    !confirm(
+      "Jeste li sigurni da želite TRAJNO obrisati ovaj događaj i sve njegove slike? Ova akcija se ne može poništiti."
+    )
+  ) {
+    return;
+  }
+  try {
+    await api.delete(`/events/${eventId.value}`);
+    router.push("/events");
+  } catch (err) {
+    errorMsg.value = "Greška pri brisanju događaja.";
+    console.error(err);
+  }
+}
 
-const eventImages = {
-  fotografiranje: [
-    {
-      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365688/rvob4mlfdt70_vvh2km.jpg",
-      name: "Rumenilo",
-    },
-    {
-      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365689/puow2hr6jttc_c7amga.jpg",
-      name: "Maskara",
-    },
-    {
-      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365685/melem-cold-cream-hranjivi-balzam-za-usne-_yyfocx.jpg",
-      name: "Balzam za usne",
-    },
-    {
-      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365685/Bionike-DEFENCE-Hydractive-SPF-15-BB-krema-40-ml_bhjyan.jpg",
-      name: "BB krema",
-    },
-  ],
-  "poslovni sastanak": [
-    {
-      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000003/foundation_full.jpg",
-      name: "Tečni puder s punom pokrivnošću",
-    },
-    {
-      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000004/eyeshadow.jpg",
-      name: "Zlatna sjenila",
-    },
-    {
-      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000005/highlighter.jpg",
-      name: "Highlighter",
-    },
-  ],
-  fotografiranje: [
-    {
-      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000006/smokey.jpg",
-      name: "Paleta tamnih sjenila",
-    },
-    {
-      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000007/lipstick.jpg",
-      name: "Mat ruž tamne boje",
-    },
-    {
-      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762000008/fixspray.jpg",
-      name: "Fiksator šminke",
-    },
-  ],
-  posao: [
-    {
-      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365689/puow2hr6jttc_c7amga.jpg",
-      name: "Maskara",
-    },
-    {
-      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365685/Bionike-DEFENCE-Hydractive-SPF-15-BB-krema-40-ml_bhjyan.jpg",
-      name: "BB krema",
-    },
-    {
-      img: "https://res.cloudinary.com/ditd1epqb/image/upload/v1762365688/rvob4mlfdt70_vvh2km.jpg",
-      name: "Rumenilo",
-    },
-  ],
-};
+function openImage(url) {
+  fullscreenImg.value = url;
+}
+function closeImage() {
+  fullscreenImg.value = null;
+}
 
-const isSupportedEvent = computed(() =>
-  supportedEvents.includes((route.params.id || "").toLowerCase())
-);
+onMounted(() => {
+  fetchEventDetails();
+  window.addEventListener("storage", handleStorage);
+});
 
-const imagesForEvent = computed(() => {
-  const key = (route.params.id || "").toLowerCase();
-  return eventImages[key] || [];
+onUnmounted(() => {
+  window.removeEventListener("storage", handleStorage);
 });
 </script>
 
@@ -139,7 +112,6 @@ const imagesForEvent = computed(() => {
           <button class="link" @click="go('/profile')">Profil</button>
           <button class="link" @click="logout">Odjava</button>
         </template>
-
         <template v-else>
           <button class="link" @click="go('/login')">Prijava</button>
           <button class="btn accent" @click="go('/register')">
@@ -150,30 +122,49 @@ const imagesForEvent = computed(() => {
     </header>
 
     <main class="content">
-      <section class="details-hero">
-        <h1>{{ route.params.id.toUpperCase() }}</h1>
-      </section>
+      <div v-if="loading" class="state-info">Učitavanje...</div>
+      <div v-else-if="errorMsg" class="state-info error">{{ errorMsg }}</div>
+      <template v-else-if="event">
+        <section class="details-hero">
+          <h1>{{ event.title }}</h1>
+          <p>{{ event.description }}</p>
+          <div v-if="isAdmin" class="admin-actions">
+            <button class="btn cta" @click="go(`/events/edit/${event._id}`)">
+              Uredi Događaj
+            </button>
+            <button class="btn delete" @click="deleteEvent">
+              Obriši Događaj
+            </button>
+          </div>
+        </section>
 
-      <transition name="fade">
-        <div v-if="isSupportedEvent" class="detail-card">
-          <h2>Preporučeni proizvodi</h2>
-
-          <div class="product-gallery">
-            <div v-for="p in imagesForEvent" :key="p.name" class="product-card">
-              <img :src="p.img" :alt="p.name" />
-              <span>{{ p.name }}</span>
+        <div class="detail-card">
+          <h2>Galerija Događaja</h2>
+          <div
+            v-if="event.contentImageUrls && event.contentImageUrls.length > 0"
+            class="image-gallery"
+          >
+            <div
+              v-for="url in event.contentImageUrls"
+              :key="url"
+              class="image-card"
+              @click="openImage(url)"
+            >
+              <img :src="url" :alt="event.title" />
             </div>
           </div>
-        </div>
-
-        <div v-else class="detail-card">
-          <h2>Slike uskoro</h2>
-          <p style="opacity: 0.85">
-            Trenutno nemamo slike za ovaj događaj. Bit će dodane uskoro. 💄
+          <p v-else class="empty-gallery">
+            Nema dodatnih slika za ovaj događaj.
           </p>
         </div>
-      </transition>
+      </template>
     </main>
+
+    <transition name="fade">
+      <div v-if="fullscreenImg" class="fullscreen" @click="closeImage">
+        <img :src="fullscreenImg" alt="Povećana slika" />
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -284,7 +275,6 @@ const imagesForEvent = computed(() => {
 .details-hero {
   margin-bottom: 60px;
 }
-
 .details-hero h1 {
   font-size: 2.8rem;
   background: linear-gradient(90deg, var(--brand-accent), var(--brand-primary));
@@ -292,78 +282,107 @@ const imagesForEvent = computed(() => {
   color: transparent;
   margin-bottom: 16px;
 }
+.details-hero p {
+  max-width: 700px;
+  margin: 0 auto 24px;
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
 
-.details-hero::after {
-  content: "";
-  display: block;
-  width: 160px;
-  height: 2px;
-  margin: 10px auto 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--brand-accent), var(--brand-primary));
-  opacity: 0.6;
+.admin-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+.btn.delete {
+  background: #a83232;
 }
 
 .detail-card {
   width: 100%;
-  max-width: 1150px;
+  max-width: 1600px;
   margin: 0 auto;
   background: rgba(34, 36, 40, 0.8);
   border-radius: 24px;
-  padding: 40px 60px 60px;
+  padding: 40px;
   box-shadow: 0 25px 70px rgba(0, 0, 0, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  overflow-x: auto;
 }
-
 .detail-card h2 {
   margin-bottom: 30px;
   font-size: 1.8rem;
-  color: #fff;
-}
-
-.product-gallery {
-  display: flex;
-  gap: 35px;
-  justify-content: flex-start;
-  align-items: flex-start;
-  overflow-x: auto;
-  padding-bottom: 20px;
-}
-
-.product-card {
-  flex: 0 0 auto;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
-  padding: 16px;
-  width: 340px;
   text-align: center;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-.product-card:hover {
-  transform: scale(1.06);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
-}
-.product-card img {
-  width: 100%;
-  height: 270px;
-  object-fit: cover;
-  border-radius: 12px;
-  margin-bottom: 10px;
-}
-.product-card span {
-  font-size: 1.1rem;
-  font-weight: 700;
 }
 
+.image-gallery {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.image-card {
+  cursor: zoom-in;
+}
+.image-card img {
+  width: 100%;
+  height: 250px;
+  object-fit: cover;
+  border-radius: 16px;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.image-card:hover img {
+  transform: scale(1.03);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.state-info {
+  font-size: 1.2rem;
+}
+.state-info.error {
+  color: #ff9d9d;
+}
+.empty-gallery {
+  opacity: 0.8;
+}
+
+.fullscreen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 250;
+}
+.fullscreen img {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: 16px;
+  cursor: zoom-out;
+}
 .fade-enter-active,
 .fade-leave-active {
-  transition: all 0.4s ease;
+  transition: all 0.25s ease;
 }
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: scale(0.97);
+}
+
+@media (max-width: 1200px) {
+  .image-gallery {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 800px) {
+  .image-gallery {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 500px) {
+  .image-gallery {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

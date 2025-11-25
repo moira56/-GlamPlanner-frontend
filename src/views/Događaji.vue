@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import api from "../api/api.js";
 
 const router = useRouter();
 const route = useRoute();
@@ -28,53 +29,28 @@ function logout() {
   router.push("/login");
 }
 
-const events = [
-  {
-    id: "vjenčanje",
-    title: "Vjenčanje",
-    desc: "Elegantan i dugotrajan make-up za tvoj poseban dan.",
-    image:
-      "https://res.cloudinary.com/ditd1epqb/image/upload/v1762361809/istockphoto-1190043570-612x612_cwqvey.jpg",
-  },
-  {
-    id: "matura",
-    title: "Matura",
-    desc: "Sjaj i mladenački glam za nezaboravnu večer.",
-    image:
-      "https://res.cloudinary.com/ditd1epqb/image/upload/v1762361809/foto47599_cjyprf.jpg",
-  },
-  {
-    id: "posao",
-    title: "Poslovni sastanak",
-    desc: "Diskretan i uredan make-up koji odiše profesionalnošću.",
-    image:
-      "https://res.cloudinary.com/ditd1epqb/image/upload/v1762361809/Board-meeting-image_dwcwbu.jpg",
-  },
-  {
-    id: "rođendan",
-    title: "Proslava rođendana",
-    desc: "Veseli tonovi i blistav sjaj za slavlje do kasno u noć.",
-    image:
-      "https://res.cloudinary.com/ditd1epqb/image/upload/v1762361809/2021_09_shutterstock_1323618038-scaled_r82pzz.jpg",
-  },
-  {
-    id: "večernji-izlazak",
-    title: "Večernji izlazak",
-    desc: "Smokey eyes i ruž boje vina — klasika koja nikad ne izlazi iz mode.",
-    image:
-      "https://res.cloudinary.com/ditd1epqb/image/upload/v1762361810/premium_photo-1661315452408-ab1839e8d468_e2lxag.jpg",
-  },
-  {
-    id: "fotografiranje",
-    title: "Fotografiranje",
-    desc: "Besprijekoran ten i naglašene crte lica za kameru.",
-    image:
-      "https://res.cloudinary.com/ditd1epqb/image/upload/v1762361808/2-challenges-of-photo-shooting_pb95rb.jpg",
-  },
-];
+const events = ref([]);
+const loading = ref(true);
+const errorMsg = ref("");
+
+async function fetchEvents() {
+  loading.value = true;
+  errorMsg.value = "";
+  try {
+    const response = await api.get("/events");
+    events.value = response.data;
+  } catch (err) {
+    console.error(err);
+    errorMsg.value = "Greška pri dohvaćanju događaja.";
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(fetchEvents);
 
 function openEvent(event) {
-  router.push(`/events/${event.id}`);
+  router.push(`/events/${event._id}`);
 }
 </script>
 
@@ -129,16 +105,28 @@ function openEvent(event) {
         </p>
       </section>
 
-      <section class="events-grid">
+      <section v-if="loading" class="loading-state">
+        <p>Učitavanje događaja...</p>
+      </section>
+
+      <section v-else-if="errorMsg" class="error-state">
+        <p>{{ errorMsg }}</p>
+      </section>
+
+      <section v-else-if="events.length === 0" class="empty-state">
+        <p>Trenutno nema unesenih događaja.</p>
+      </section>
+
+      <section v-else class="events-grid">
         <div
           v-for="event in events"
-          :key="event.id"
+          :key="event._id"
           class="event-card"
           @click="openEvent(event)"
         >
-          <img :src="event.image" alt="" class="event-image" />
+          <img :src="event.imageUrl" :alt="event.title" class="event-image" />
           <h2>{{ event.title }}</h2>
-          <p>{{ event.desc }}</p>
+          <p>{{ event.description }}</p>
         </div>
       </section>
     </main>
@@ -305,6 +293,13 @@ function openEvent(event) {
 }
 .event-card p {
   font-size: 1rem;
+  opacity: 0.9;
+}
+
+.loading-state,
+.error-state,
+.empty-state {
+  font-size: 1.2rem;
   opacity: 0.9;
 }
 

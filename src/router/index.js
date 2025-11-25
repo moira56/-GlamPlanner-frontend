@@ -26,6 +26,19 @@ const routes = [
     component: () => import("../views/Događaji.vue"),
   },
   {
+    path: "/events/new",
+    name: "new-event",
+    component: () => import("../views/EventForm.vue"),
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: "/events/edit/:id",
+    name: "edit-event",
+    component: () => import("../views/EventForm.vue"),
+    meta: { requiresAdmin: true },
+    props: true,
+  },
+  {
     path: "/events/:id",
     name: "event-details",
     component: () => import("../views/DogađajDetalji.vue"),
@@ -54,15 +67,20 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+
   const publicPages = ["/login", "/register"];
   const authRequired = !publicPages.includes(to.path);
-  const token = localStorage.getItem("token");
-
   if (authRequired && !token) {
     return next("/login");
   }
 
   if ((to.path === "/login" || to.path === "/register") && token) {
+    return next("/");
+  }
+
+  if (to.meta.requiresAdmin && role !== "admin") {
     return next("/");
   }
 
