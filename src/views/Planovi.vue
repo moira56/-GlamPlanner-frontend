@@ -335,19 +335,26 @@ async function deleteReply(plan, reply, isUserView) {
   const replyId = reply._id?.toString?.() || reply._id;
   if (!planId || !replyId) return;
 
-  if (!confirm("Sigurno želiš obrisati ovaj odgovor?")) return;
+  const confirmationMessage = isAdmin.value
+    ? "TRAJNO brisanje! Odgovor će biti obrisan i za korisnika. Jeste li sigurni?"
+    : "Želite li sakriti ovaj odgovor? (ostat će vidljiv adminu)";
+
+  if (!confirm(confirmationMessage)) return;
 
   errorMsg.value = "";
   successMsg.value = "";
 
   try {
-    const res = await fetch(`${API_BASE}/plans/${planId}/replies/${replyId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token.value}` },
-    });
+    const res = await fetch(
+      `${API_BASE}/plans/${planId}/replies/${replyId}/hide`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token.value}` },
+      }
+    );
     const data = await res.json();
     if (!res.ok)
-      throw new Error(data.message || "Brisanje odgovora nije uspjelo.");
+      throw new Error(data.message || "Skrivanje odgovora nije uspjelo.");
 
     if (isUserView) {
       userPlans.value = userPlans.value.map((p) =>
@@ -360,7 +367,7 @@ async function deleteReply(plan, reply, isUserView) {
     }
   } catch (err) {
     console.error(err);
-    errorMsg.value = err.message || "Greška pri brisanju odgovora.";
+    errorMsg.value = err.message || "Greška pri skrivanju odgovora.";
   }
 }
 
@@ -368,24 +375,35 @@ async function deletePlan(plan) {
   const planId = getPlanId(plan);
   if (!planId) return;
 
-  if (!confirm("Sigurno želiš obrisati ovaj upit i sve odgovore?")) return;
+  if (
+    !confirm(
+      "Sigurno želiš obrisati ovaj upit? (ostat će vidljiv drugoj strani)"
+    )
+  )
+    return;
 
   errorMsg.value = "";
   successMsg.value = "";
 
   try {
-    const res = await fetch(`${API_BASE}/plans/${planId}`, {
-      method: "DELETE",
+    const res = await fetch(`${API_BASE}/plans/${planId}/hide`, {
+      method: "POST",
       headers: { Authorization: `Bearer ${token.value}` },
     });
     const data = await res.json();
     if (!res.ok)
-      throw new Error(data.message || "Brisanje upita nije uspjelo.");
+      throw new Error(data.message || "Skrivanje upita nije uspjelo.");
 
-    adminPlans.value = adminPlans.value.filter((p) => getPlanId(p) !== planId);
+    if (isAdmin.value) {
+      adminPlans.value = adminPlans.value.filter(
+        (p) => getPlanId(p) !== planId
+      );
+    } else {
+      userPlans.value = userPlans.value.filter((p) => getPlanId(p) !== planId);
+    }
   } catch (err) {
     console.error(err);
-    errorMsg.value = err.message || "Greška pri brisanju upita.";
+    errorMsg.value = err.message || "Greška pri skrivanju upita.";
   }
 }
 
@@ -396,6 +414,16 @@ function openImage(url) {
 function closeImage() {
   fullscreenImg.value = null;
 }
+
+const userId = computed(() => {
+  try {
+    if (!token.value) return null;
+    const payload = JSON.parse(atob(token.value.split(".")[1]));
+    return payload.id;
+  } catch {
+    return null;
+  }
+});
 
 onMounted(() => {
   if (!isAuthed.value) return;
@@ -575,7 +603,9 @@ onMounted(() => {
               <div v-if="plan.replies?.length" class="replies">
                 <p class="replies-title">Odgovori admina:</p>
                 <div
-                  v-for="rep in plan.replies"
+                  v-for="rep in plan.replies.filter(
+                    (r) => !r.hiddenBy?.includes(userId)
+                  )"
                   :key="rep._id"
                   class="reply-item"
                 >
@@ -686,7 +716,9 @@ onMounted(() => {
               <div v-if="plan.replies?.length" class="replies">
                 <p class="replies-title">Tvoji odgovori:</p>
                 <div
-                  v-for="rep in plan.replies"
+                  v-for="rep in plan.replies.filter(
+                    (r) => !r.hiddenBy?.includes(userId)
+                  )"
                   :key="rep._id"
                   class="reply-item"
                 >
