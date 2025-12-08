@@ -139,7 +139,7 @@ onUnmounted(() => {
         </section>
 
         <div class="detail-card">
-          <h2>Galerija Događaja</h2>
+          <h2>Preporučeni proizvodi</h2>
           <div
             v-if="event.contentImageUrls && event.contentImageUrls.length > 0"
             class="image-gallery"
