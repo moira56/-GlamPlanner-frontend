@@ -67,7 +67,7 @@ function logout() {
     <main class="content">
       <section class="hero">
         <div class="glass">
-          <h1 class="h-title">Dobrodošla u <span>GlamPlanner</span></h1>
+          <h1 class="h-title">Dobrodošli u <span>GlamPlanner</span></h1>
           <p class="h-sub">
             Upravljaj svojim make-up planovima, pregledaj događaje, dodaj
             lookove u galeriju i otkrij profesionalne savjete.
