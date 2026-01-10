@@ -45,6 +45,10 @@ async function register() {
     localStorage.setItem("role", data.user?.role || "user");
 
     successMsg.value = "Registracija uspješna!";
+
+    setTimeout(() => {
+      router.push("/");
+    }, 1000);
   } catch (err) {
     errorMsg.value =
       err?.response?.data?.message ||
